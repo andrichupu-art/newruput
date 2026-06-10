@@ -671,7 +671,6 @@ let activeOrderCode = localStorage.getItem('fj_order_code') || null;
 let statusPollTimer = null;
 let realtimeChannel = null;
 let isMember        = false;
-let proofUploaded   = false;
 let pendingOrderData = null; // simpan data order sementara sebelum bayar
 
 const MENU_GROUPS = [
@@ -934,7 +933,8 @@ function selectOrderType(type) {
 function validateSendButton() {
     const nama = document.getElementById('input-nama').value.trim();
     const hp   = document.getElementById('input-hp').value.trim();
-    const ok   = cartItems() > 0 && nama && hp.length >= 10 && orderType && pickupTime;
+    const ok   = cartItems() > 0 && nama && hp.length >= 10 && orderType &&
+                 (orderType !== 'pickup' || pickupTime);
     document.getElementById('btn-send-order').disabled = !ok;
 }
 
@@ -960,7 +960,6 @@ async function sendOrder() {
 }
 
 async function openPaymentModal(hp, total) {
-    proofUploaded = false;
     isMember = false;
     document.getElementById('upload-preview').style.display = 'none';
     document.getElementById('upload-status').textContent = '';
@@ -1003,7 +1002,6 @@ function previewProof(event) {
     preview.src = URL.createObjectURL(file);
     preview.style.display = 'block';
     document.getElementById('upload-status').textContent = '✅ Foto dipilih: ' + file.name;
-    proofUploaded = true;
     document.getElementById('btn-confirm-pay').disabled = false;
     document.getElementById('btn-confirm-pay').style.opacity = '1';
 }
@@ -1049,7 +1047,7 @@ async function confirmPayment() {
         closePaymentModal();
         document.getElementById('success-screen').classList.add('show');
         cart = {};
-        renderCart();
+        renderCartModal();
         renderGrid();
         startStatusPoll();
     } catch(e) {

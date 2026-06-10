@@ -803,7 +803,10 @@ function subscribeProducts() {
                 renderUI();
             }
         })
-        .subscribe();
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') console.log('[Realtime] products terhubung ✅');
+            if (status === 'CHANNEL_ERROR') console.error('[Realtime] products GAGAL — aktifkan Realtime di Supabase dashboard!');
+        });
 }
 
 async function loadTransactions() {

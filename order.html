@@ -1092,15 +1092,17 @@ function startStatusPoll() {
     checkOrderStatus();
 
     // ── Supabase Realtime (instant update) ──
+    // Filter by code tidak reliable di Realtime, cek manual di callback
     realtimeChannel = supa
         .channel('order-status-' + activeOrderCode)
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'orders',
-            filter: `code=eq.${activeOrderCode}`
+            table: 'orders'
         }, payload => {
             if (!payload.new) return;
+            // Abaikan update order lain
+            if (payload.new.code !== activeOrderCode) return;
             const data = payload.new;
             const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
             const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };

@@ -1,6 +1,6 @@
 {
-  "name": "FreshJuice — Pesan Online",
-  "short_name": "FreshJuice",
+  "name": "NEWRUPUT — Pesan Online",
+  "short_name": "ORDER ONLINE",
   "description": "Pesan jus segar langsung dari HP, tanpa antri!",
   "start_url": "./order.html",
   "display": "standalone",

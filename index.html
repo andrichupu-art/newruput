@@ -639,6 +639,76 @@
             <div id="hpp-cards-container"></div>
         </div>
 
+        <!-- TAB MEMBER -->
+        <div id="tab-member" class="tab-content">
+            <div style="position:relative;display:flex;align-items:center;">
+                <div style="flex:1;background:linear-gradient(to right,#16A34A 0%,#4ade80 55%,rgba(255,255,255,0) 100%);border-radius:12px;padding:10px 18px;">
+                    <h2 style="font-size:16px;font-weight:800;color:white;margin:0;">⭐ Kelola Member</h2>
+                </div>
+                <img src="LOGO.png" alt="Logo" style="width:72px;flex-shrink:0;margin-left:-8px;">
+            </div>
+
+            <!-- Stat -->
+            <div style="background:white;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.07);padding:16px 20px;display:flex;align-items:center;gap:14px;">
+                <div style="width:44px;height:44px;border-radius:12px;background:#E8F5EC;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⭐</div>
+                <div>
+                    <div id="member-total-count" style="font-size:22px;font-weight:900;color:#15803D;">—</div>
+                    <div style="font-size:12px;color:#94A3B8;font-weight:600;">Total Member Terdaftar</div>
+                </div>
+            </div>
+
+            <!-- Form Tambah -->
+            <div style="background:white;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.07);padding:18px;display:flex;flex-direction:column;gap:12px;">
+                <div style="font-size:14px;font-weight:800;color:#1A1A2E;display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-user-plus" style="color:#16A34A;"></i> Tambah Member Baru
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div style="display:flex;gap:10px;">
+                        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                            <label style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.04em;">Nama</label>
+                            <input type="text" id="member-input-nama" placeholder="Nama lengkap"
+                                style="padding:11px 13px;border:1.5px solid #E8EDF2;border-radius:12px;font-size:13px;font-family:inherit;outline:none;background:white;color:#1A1A2E;text-transform:none;width:100%;"
+                                onfocus="this.style.borderColor='#16A34A'" onblur="this.style.borderColor='#E8EDF2'">
+                        </div>
+                        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                            <label style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.04em;">No. HP</label>
+                            <input type="tel" id="member-input-phone" placeholder="08xxxxxxxxxx"
+                                style="padding:11px 13px;border:1.5px solid #E8EDF2;border-radius:12px;font-size:13px;font-family:inherit;outline:none;background:white;color:#1A1A2E;text-transform:none;width:100%;"
+                                onfocus="this.style.borderColor='#16A34A'" onblur="this.style.borderColor='#E8EDF2'">
+                        </div>
+                    </div>
+                    <button id="member-btn-tambah" onclick="memberTambah()"
+                        style="background:linear-gradient(135deg,#16A34A 0%,#22c55e 100%);color:white;border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(22,163,74,0.3);font-family:inherit;">
+                        <i class="fa-solid fa-plus"></i> Tambah Member
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div style="position:relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#94A3B8;font-size:14px;"></i>
+                <input type="text" id="member-search" placeholder="Cari nama atau nomor HP…"
+                    oninput="memberFilter()"
+                    style="width:100%;padding:12px 14px 12px 38px;border:1.5px solid #E8EDF2;border-radius:12px;font-size:13px;font-family:inherit;outline:none;background:white;text-transform:none;"
+                    onfocus="this.style.borderColor='#16A34A'" onblur="this.style.borderColor='#E8EDF2'">
+            </div>
+
+            <!-- List -->
+            <div style="background:white;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.07);overflow:hidden;">
+                <div style="padding:14px 18px;border-bottom:1px solid #E8EDF2;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="font-size:14px;font-weight:800;color:#1A1A2E;display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-users" style="color:#16A34A;font-size:13px;"></i> Daftar Member
+                    </div>
+                    <div id="member-list-count" style="background:#E8F5EC;color:#15803D;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:800;">0</div>
+                </div>
+                <div id="member-list-container">
+                    <div style="padding:30px;text-align:center;color:#94A3B8;font-size:13px;font-weight:600;">
+                        <span class="spin" style="display:inline-block;width:18px;height:18px;border:2px solid #E8EDF2;border-top-color:#16A34A;border-radius:50%;animation:rot .7s linear infinite;vertical-align:middle;margin-right:6px;"></span>Memuat…
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <nav class="bottom-nav">
@@ -648,6 +718,7 @@
         <div class="nav-item" id="nav-riwayat" onclick="switchTab('riwayat')"><i class="fa-solid fa-receipt"></i><span>RIWAYAT</span></div>
         <div class="nav-item" id="nav-laporan" onclick="switchTab('laporan')"><i class="fa-solid fa-chart-pie"></i><span>LAPORAN</span></div>
         <div class="nav-item" id="nav-hpp" onclick="switchTab('hpp')"><i class="fa-solid fa-coins"></i><span>HPP</span></div>
+        <div class="nav-item" id="nav-member" onclick="switchTab('member')"><i class="fa-solid fa-star"></i><span>MEMBER</span></div>
     </nav>
 
     <!-- Modal QTY (Bottom Sheet Stepper) -->
@@ -1096,6 +1167,7 @@ function switchTab(t) {
     if (t === 'riwayat') updateRiwayatUI();
     if (t === 'laporan') updateLaporanUI();
     if (t === 'hpp')     { hppRenderAll(); hppSetCat(activeHppCat); }
+    if (t === 'member')  memberLoad();
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -2418,6 +2490,89 @@ setTimeout(() => {
     fetchOrders();
     subscribePesanan();
 }, 2000);
+
+// ╔══════════════════════════════════════════════════════════╗
+//   MEMBER
+// ╚══════════════════════════════════════════════════════════╝
+let memberData = [];
+let memberLoaded = false;
+
+async function memberLoad() {
+    if (memberLoaded) return; // sudah loaded, skip jika tidak ada perubahan
+    const { data, error } = await supa.from('members').select('*').order('name');
+    if (error) { showToast('❌ Gagal memuat member: ' + error.message); return; }
+    memberData = data || [];
+    memberLoaded = true;
+    memberRender(memberData);
+}
+
+function memberRender(list) {
+    const el = document.getElementById('member-list-container');
+    const countEl = document.getElementById('member-list-count');
+    const totalEl = document.getElementById('member-total-count');
+    if (countEl) countEl.textContent = list.length;
+    if (totalEl) totalEl.textContent = memberData.length;
+    if (!el) return;
+    if (list.length === 0) {
+        el.innerHTML = '<div style="padding:40px 20px;text-align:center;color:#94A3B8;font-size:13px;font-weight:600;">👤 Belum ada member terdaftar</div>';
+        return;
+    }
+    el.innerHTML = list.map(m => {
+        const inisial = m.name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+        const tgl = m.created_at ? new Date(m.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '';
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #E8EDF2;">
+            <div style="width:38px;height:38px;border-radius:10px;background:#E8F5EC;color:#15803D;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;">${inisial}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:700;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+                <div style="font-size:11px;color:#94A3B8;font-weight:600;margin-top:1px;"><i class="fa-solid fa-phone" style="font-size:9px;margin-right:3px;"></i>${m.phone}</div>
+                <div style="font-size:10px;color:#94A3B8;font-weight:500;">Daftar: ${tgl}</div>
+            </div>
+            <button onclick="memberHapus(${m.id}, '${m.name.replace(/'/g,"\'")}')"
+                style="width:32px;height:32px;border-radius:9px;border:none;background:#FDECEC;color:#EF4444;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function memberFilter() {
+    const q = document.getElementById('member-search').value.toLowerCase();
+    const filtered = memberData.filter(m => m.name.toLowerCase().includes(q) || m.phone.includes(q));
+    memberRender(filtered);
+}
+
+async function memberTambah() {
+    const nama  = document.getElementById('member-input-nama').value.trim();
+    const phone = document.getElementById('member-input-phone').value.trim();
+    if (!nama)  { showToast('⚠️ Nama wajib diisi'); return; }
+    if (!phone || phone.length < 9) { showToast('⚠️ Nomor HP tidak valid'); return; }
+    const btn = document.getElementById('member-btn-tambah');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan…';
+    const { error } = await supa.from('members').insert({ name: nama, phone });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-plus"></i> Tambah Member';
+    if (error) {
+        if (error.code === '23505') showToast('⚠️ Nomor HP sudah terdaftar sebagai member');
+        else showToast('❌ Gagal: ' + error.message);
+        return;
+    }
+    document.getElementById('member-input-nama').value = '';
+    document.getElementById('member-input-phone').value = '';
+    showToast('✅ Member berhasil ditambahkan!');
+    memberLoaded = false;
+    await memberLoad();
+}
+
+async function memberHapus(id, name) {
+    if (!confirm(`Hapus "${name}" dari daftar member?`)) return;
+    const { error } = await supa.from('members').delete().eq('id', id);
+    if (error) { showToast('❌ Gagal hapus: ' + error.message); return; }
+    showToast('🗑️ Member dihapus');
+    memberLoaded = false;
+    await memberLoad();
+}
+
 </script>
 </body>
 </html>

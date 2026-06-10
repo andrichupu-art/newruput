@@ -2705,9 +2705,26 @@ async function opsSave() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan…';
 
     try {
-        const { error } = await supa
+        // Coba UPDATE dulu (tidak butuh INSERT policy)
+        const { data: existing } = await supa
             .from('store_settings')
-            .upsert({ key: 'jam_operasional', value: opsData }, { onConflict: 'key' });
+            .select('key')
+            .eq('key', 'jam_operasional')
+            .maybeSingle();
+
+        let error;
+        if (existing) {
+            // Row sudah ada → UPDATE
+            ({ error } = await supa
+                .from('store_settings')
+                .update({ value: opsData })
+                .eq('key', 'jam_operasional'));
+        } else {
+            // Row belum ada → INSERT
+            ({ error } = await supa
+                .from('store_settings')
+                .insert({ key: 'jam_operasional', value: opsData }));
+        }
         if (error) throw error;
         showToast('✅ Jadwal operasional disimpan!');
         opsUpdateStatus();

@@ -960,7 +960,13 @@ async function openPaymentModal(hp, total) {
             document.getElementById('btn-confirm-pay').disabled = true;
             document.getElementById('btn-confirm-pay').style.opacity = '0.5';
         }
-    } catch(e) { isMember = false; }
+    } catch(e) {
+        isMember = false;
+        document.getElementById('member-badge').style.display = 'none';
+        document.getElementById('pay-qris-section').style.display = 'block';
+        document.getElementById('btn-confirm-pay').disabled = true;
+        document.getElementById('btn-confirm-pay').style.opacity = '0.5';
+    }
     document.getElementById('payment-modal').classList.add('open');
     closeCartModal();
 }

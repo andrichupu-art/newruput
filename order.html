@@ -821,18 +821,60 @@ function updateQtyBadge(id) {
 
 
 // ── STORE HOURS CHECK ────────────────────────────────────────
-const STORE_OPEN_H  = 10;
-const STORE_CLOSE_H = 20;
+let opsSettings = {
+    jam_buka: '10:00',
+    jam_tutup: '20:00',
+    hari_libur: [],
+    override_closed: false
+};
+
+async function loadOpsSettings() {
+    try {
+        const { data, error } = await supa
+            .from('store_settings')
+            .select('value')
+            .eq('key', 'jam_operasional')
+            .maybeSingle();
+        if (!error && data && data.value) {
+            const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+            opsSettings = { ...opsSettings, ...val };
+        }
+    } catch(e) { console.warn('loadOpsSettings error:', e); }
+}
 
 function isStoreOpen() {
+    if (opsSettings.override_closed) return false;
+
     const now = new Date();
     const wibNow = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
-    const minutes = wibNow.getHours() * 60 + wibNow.getMinutes();
-    return minutes >= STORE_OPEN_H * 60 && minutes < STORE_CLOSE_H * 60;
+    const hariIni = wibNow.getDay(); // 0=Min
+    if ((opsSettings.hari_libur || []).includes(hariIni)) return false;
+
+    const nowMin = wibNow.getHours() * 60 + wibNow.getMinutes();
+    const [bH, bM] = (opsSettings.jam_buka  || '10:00').split(':').map(Number);
+    const [tH, tM] = (opsSettings.jam_tutup || '20:00').split(':').map(Number);
+    const bukaMin  = bH * 60 + bM;
+    const tutupMin = tH * 60 + tM;
+
+    // Handle crossing midnight (mis. buka 10:00 – tutup 01:00)
+    if (tutupMin < bukaMin) {
+        return nowMin >= bukaMin || nowMin < tutupMin;
+    }
+    return nowMin >= bukaMin && nowMin < tutupMin;
 }
 
 function checkStoreClosed() {
     const banner = document.getElementById('store-closed-banner');
+    const hint   = document.getElementById('pickup-time-hint');
+    const buka   = opsSettings.jam_buka  || '10:00';
+    const tutup  = opsSettings.jam_tutup || '20:00';
+    const jamStr = buka.replace(':','.') + ' – ' + tutup.replace(':','.');
+
+    // Update teks dinamis
+    const bannerSpan = banner.querySelector('span');
+    if (bannerSpan) bannerSpan.textContent = 'Jam operasional ' + jamStr + ' WIB';
+    if (hint) hint.textContent = '⏰ Toko buka pukul ' + jamStr;
+
     if (!isStoreOpen()) {
         banner.style.display = 'block';
         document.body.classList.add('store-closed');
@@ -850,6 +892,7 @@ async function initApp() {
         products = data || [];
         renderCatBar();
         renderGrid();
+        await loadOpsSettings();
         checkStoreClosed();
         if (activeOrderCode) checkOrderStatus();
         document.getElementById('loader').style.display = 'none';

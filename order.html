@@ -488,6 +488,7 @@
     <div class="header-text">
         <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
+        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.0.1</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
         <i class="fa-solid fa-basket-shopping"></i>
@@ -962,27 +963,60 @@ function cartAdjust(id, delta) {
 
 function buildPickupTimeGrid() {
     const list = document.getElementById('time-dropdown-list');
-    if (list.children.length > 0) return;
-    const slots = [];
+
+    // Waktu sekarang dalam WIB (UTC+7)
+    const now = new Date();
+    const wibNow = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
+    const nowMinutes = wibNow.getHours() * 60 + wibNow.getMinutes();
+
+    // Buat semua slot 10.00-20.00
+    const allSlots = [];
     for (let h = 10; h <= 20; h++) {
-        slots.push(`${String(h).padStart(2,'0')}.00`);
-        if (h < 20) slots.push(`${String(h).padStart(2,'0')}.30`);
+        allSlots.push(String(h).padStart(2,'0') + '.00');
+        if (h < 20) allSlots.push(String(h).padStart(2,'0') + '.30');
     }
+
+    // Helper: slot string ke menit
+    const toMin = t => { const [h,m] = t.split('.').map(Number); return h*60+m; };
+
+    // Filter slot yang sudah lewat
+    const slots = allSlots.filter(t => toMin(t) > nowMinutes);
+
+    // Kalau semua slot sudah lewat (toko tutup)
+    if (slots.length === 0) {
+        list.innerHTML = '<div class="tdl-group-label" style="padding:12px;text-align:center;color:var(--danger);">⛔ Toko sudah tutup hari ini</div>';
+        return;
+    }
+
     const groups = [
-        { label: '🌤️ Pagi (10.00 – 11.30)', times: slots.filter(t => parseInt(t) < 12) },
-        { label: '☀️ Siang (12.00 – 14.30)', times: slots.filter(t => parseInt(t) >= 12 && parseInt(t) < 15) },
-        { label: '🌇 Sore (15.00 – 20.00)',  times: slots.filter(t => parseInt(t) >= 15) },
+        { label: '🌤️ Pagi (10.00 – 11.30)', times: slots.filter(t => toMin(t) < 12*60) },
+        { label: '☀️ Siang (12.00 – 14.30)', times: slots.filter(t => toMin(t) >= 12*60 && toMin(t) < 15*60) },
+        { label: '🌇 Sore (15.00 – 20.00)',  times: slots.filter(t => toMin(t) >= 15*60) },
     ];
+
     let html = '';
     groups.forEach(g => {
-        html += `<div class="tdl-group-label">${g.label}</div>`;
-        html += g.times.map(t => `
-            <div class="tdl-item" onclick="selectPickupTime('${t}')" id="ptime-${t.replace('.','_')}">
-                <div class="tdl-dot"></div> ${t}
-            </div>
-        `).join('');
+        if (g.times.length === 0) return;
+        html += '<div class="tdl-group-label">' + g.label + '</div>';
+        html += g.times.map(t =>
+            '<div class="tdl-item" onclick="selectPickupTime(\'' + t + '\')" id="ptime-' + t.replace('.','_') + '">' +
+            '<div class="tdl-dot"></div> ' + t + '</div>'
+        ).join('');
     });
     list.innerHTML = html;
+
+    // Restore highlight kalau pickupTime masih valid di daftar
+    if (pickupTime && slots.includes(pickupTime)) {
+        const el = document.getElementById('ptime-' + pickupTime.replace('.','_'));
+        if (el) el.classList.add('selected');
+    } else if (pickupTime && !slots.includes(pickupTime)) {
+        // Jam yang dipilih sudah lewat, reset
+        pickupTime = null;
+        document.getElementById('time-dropdown-label').textContent = 'Pilih jam pengambilan…';
+        const btn = document.getElementById('time-dropdown-btn');
+        btn.classList.remove('selected');
+        validateSendButton();
+    }
 }
 
 function toggleTimeDropdown() {

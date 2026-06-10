@@ -1120,6 +1120,7 @@ function startStatusPoll() {
             // Abaikan update order lain
             if (payload.new.code !== activeOrderCode) return;
             const data = payload.new;
+            console.log('REALTIME MASUK:', payload);
             const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
             const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };
 

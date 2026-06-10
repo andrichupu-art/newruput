@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FreshJuice Kasir</title>
-    <meta name="application-name" content="FreshJuice">
+    <title>NEWRUPUT JUICE Kasir</title>
+    <meta name="application-name" content="NEWRUPUT JUICE">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FreshJuice">
+    <meta name="apple-mobile-web-app-title" content="NEWRUPUT JUICE">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#2ecc71">
 
@@ -803,10 +803,7 @@ function subscribeProducts() {
                 renderUI();
             }
         })
-        .subscribe((status) => {
-            if (status === 'SUBSCRIBED') console.log('[Realtime] products terhubung ✅');
-            if (status === 'CHANNEL_ERROR') console.error('[Realtime] products GAGAL — aktifkan Realtime di Supabase dashboard!');
-        });
+        .subscribe();
 }
 
 async function loadTransactions() {
@@ -2275,6 +2272,28 @@ function renderPesananList() {
                 <span class="ot-label">Total</span>
                 <span class="ot-val">Rp ${(o.total||0).toLocaleString('id-ID')}</span>
             </div>
+            ${o.is_member ? `
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 12px;margin:6px 0;display:flex;align-items:center;gap:8px;">
+                    <span>⭐</span><span style="font-size:12px;font-weight:700;color:#15803D;">Member — Bayar di Tempat</span>
+                </div>` : ''}
+            ${!o.is_member && o.payment_status === 'waiting_verification' ? `
+                <div style="background:#fef9ec;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;margin:6px 0;">
+                    <p style="font-size:11px;font-weight:800;color:#92400e;margin:0 0 6px;">💳 Bukti Pembayaran — Perlu Verifikasi</p>
+                    ${o.payment_proof_url
+                        ? `<img src="${o.payment_proof_url}" onclick="window.open('${o.payment_proof_url}','_blank')"
+                            style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #fde68a;" alt="Bukti bayar">
+                           <p style="font-size:10px;color:#92400e;margin:4px 0 0;text-align:center;">Tap foto untuk perbesar</p>`
+                        : `<p style="font-size:11px;color:#ef4444;margin:0;">⚠️ Belum ada bukti pembayaran</p>`
+                    }
+                    ${o.payment_proof_url && o.status === 'pending' ? `
+                    <button onclick="verifikasiPembayaran(${o.id})" style="width:100%;margin-top:8px;background:#16A34A;color:white;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Poppins',sans-serif;">
+                        ✅ Verifikasi & Proses Pesanan
+                    </button>` : ''}
+                </div>` : ''}
+            ${!o.is_member && o.payment_status === 'verified' ? `
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 12px;margin:6px 0;display:flex;align-items:center;gap:8px;">
+                    <span>✅</span><span style="font-size:12px;font-weight:700;color:#15803D;">Pembayaran Terverifikasi</span>
+                </div>` : ''}
             ${actionBtns ? `<div class="order-actions">${actionBtns}</div>` : ''}
         </div>`;
     }).join('');
@@ -2298,9 +2317,14 @@ async function fetchOrders() {
 
 async function ubahStatusOrder(id, status) {
     try {
+        // Blokir jika non-member dan pembayaran belum diverifikasi
+        const order = allOrders.find(o => o.id === id);
+        if (order && !order.is_member && order.payment_status === 'waiting_verification' && status === 'processing') {
+            showToast('⚠️ Verifikasi pembayaran dulu sebelum memproses!');
+            return;
+        }
         const { error } = await supa.from('orders').update({ status }).eq('id', id);
         if (error) throw error;
-        // Update lokal langsung tanpa tunggu realtime
         const idx = allOrders.findIndex(o => o.id === id);
         if (idx !== -1) allOrders[idx].status = status;
         renderPesananList();
@@ -2308,6 +2332,20 @@ async function ubahStatusOrder(id, status) {
         showToast(status === 'processing' ? '🔄 Pesanan diproses!' : status === 'ready' ? '✅ Pesanan siap!' : '📦 Pesanan selesai!');
     } catch(e) {
         alert('Gagal update status: ' + e.message);
+    }
+}
+
+async function verifikasiPembayaran(id) {
+    try {
+        const { error } = await supa.from('orders').update({ payment_status: 'verified', status: 'processing' }).eq('id', id);
+        if (error) throw error;
+        const idx = allOrders.findIndex(o => o.id === id);
+        if (idx !== -1) { allOrders[idx].payment_status = 'verified'; allOrders[idx].status = 'processing'; }
+        renderPesananList();
+        updatePesananBadge();
+        showToast('✅ Pembayaran diverifikasi! Pesanan diproses.');
+    } catch(e) {
+        alert('Gagal verifikasi: ' + e.message);
     }
 }
 

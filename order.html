@@ -14,6 +14,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <!-- DEBUG: hapus setelah selesai -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
     <style>
         :root {
             --primary: #16A34A;
@@ -1066,7 +1069,8 @@ async function checkOrderStatus() {
         const { data, error } = await supa.from('orders')
             .select('status, customer_name, order_type, table_info')
             .eq('code', activeOrderCode).single();
-        if (error || !data) { clearActiveOrder(); return; }
+        if (error) { console.error('[Poll] error:', error.message, error.code); return; }
+        if (!data) { console.warn('[Poll] data null untuk code:', activeOrderCode); return; }
         if (data.status === 'done') { clearActiveOrder(); return; }
 
         const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };

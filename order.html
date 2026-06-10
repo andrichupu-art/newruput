@@ -1118,12 +1118,14 @@ function startStatusPoll() {
             if (ssTxt)  ssTxt.textContent  = statusLabels[data.status] || data.status;
             if (ssIcon) ssIcon.textContent = statusIcons[data.status] || '⏳';
         })
-        .subscribe();
+        .subscribe((status, err) => {
+            console.log('[Realtime] status:', status, err || '');
+        });
 
-    // ── Polling 5 detik sebagai fallback (kalau Realtime terputus) ──
+    // ── Polling 3 detik sebagai fallback ──
     statusPollTimer = setInterval(async () => {
         await checkOrderStatus();
-    }, 5000);
+    }, 3000);
 }
 
 function clearActiveOrder() {

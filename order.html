@@ -300,9 +300,10 @@
         .ot-btn i { font-size: 22px; }
         .ot-btn.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
         .time-chip {
-            padding: 10px 6px; border-radius: 10px; border: 2px solid var(--border);
-            background: white; color: #64748B; font-size: 12px; font-weight: 700;
+            padding: 11px 8px; border-radius: 10px; border: 2px solid var(--border);
+            background: white; color: #64748B; font-size: 13px; font-weight: 700;
             cursor: pointer; text-align: center; transition: all .18s;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
         }
         .time-chip.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
         .time-chip:active { transform: scale(0.95); }
@@ -549,7 +550,7 @@
                 </div>
                 <div id="pickup-time-wrap" style="display:none;">
                     <label>Jam Pengambilan</label>
-                    <div id="pickup-time-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;"></div>
+                <div id="pickup-time-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px;"></div>
                     <p id="pickup-time-hint" style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;">⏰ Toko buka pukul 10.00 – 20.00</p>
                 </div>
                 <div id="table-input-wrap" style="display:none;"></div>
@@ -667,7 +668,7 @@ const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
 // ── STATE ───────────────────────────────────────────────────
 let products     = [];
 let cart         = {};     // { productId: { qty, note } }
-let activeGroup  = 'SEMUA';
+let activeGroup  = 'JUICE';
 let selectedPid  = null;
 let orderType    = null;   // 'pickup'
 let pickupTime   = null;   // misal '11.00'
@@ -678,7 +679,6 @@ let isMember        = false;
 let pendingOrderData = null; // simpan data order sementara sebelum bayar
 
 const MENU_GROUPS = [
-    { key:'SEMUA', label:'Semua Menu', emoji:'🏪' },
     { key:'JUICE', label:'Juice', emoji:'🧃' },
     { key:'NON JUICE', label:'Non Juice', emoji:'🥤' },
     { key:'ANEKA MIE', label:'Aneka Mie', emoji:'🍜' },
@@ -769,8 +769,7 @@ function renderCatBar() {
 
 function renderGrid() {
     const grid = document.getElementById('product-grid');
-    let filtered = products;
-    if (activeGroup !== 'SEMUA') filtered = products.filter(p => getProductGroup(p.name) === activeGroup);
+    let filtered = products.filter(p => getProductGroup(p.name) === activeGroup);
 
     if (!filtered.length) {
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
@@ -907,15 +906,31 @@ function cartAdjust(id, delta) {
 
 function buildPickupTimeGrid() {
     const grid = document.getElementById('pickup-time-grid');
-    if (grid.children.length > 0) return; // sudah dibuat
+    if (grid.children.length > 0) return;
     const slots = [];
     for (let h = 10; h <= 20; h++) {
         slots.push(`${String(h).padStart(2,'0')}.00`);
         if (h < 20) slots.push(`${String(h).padStart(2,'0')}.30`);
     }
-    grid.innerHTML = slots.map(t => `
-        <button class="time-chip" onclick="selectPickupTime('${t}')" id="ptime-${t.replace('.','_')}">${t}</button>
-    `).join('');
+
+    // Grouping
+    const groups = [
+        { label: '🌤️ Pagi', times: slots.filter(t => parseInt(t) < 12) },
+        { label: '☀️ Siang', times: slots.filter(t => parseInt(t) >= 12 && parseInt(t) < 15) },
+        { label: '🌇 Sore', times: slots.filter(t => parseInt(t) >= 15) },
+    ];
+
+    let html = '';
+    groups.forEach(g => {
+        html += `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-muted);margin-top:4px;">${g.label}</div>`;
+        html += g.times.map(t => `
+            <button class="time-chip" onclick="selectPickupTime('${t}')" id="ptime-${t.replace('.','_')}">
+                🕐 ${t}
+            </button>
+        `).join('');
+    });
+
+    grid.innerHTML = html;
 }
 
 function selectPickupTime(time) {

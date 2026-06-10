@@ -30,7 +30,7 @@
             --shadow: 0 4px 20px rgba(0,0,0,0.07);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: var(--text-main); min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+        body { background: var(--bg); color: var(--text-main); min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; overscroll-behavior-y: contain; }
 
         /* ── LOADER ── */
         #loader {
@@ -433,6 +433,10 @@
         </div>
     </div>
 
+    <p style="font-size:11px;color:var(--text-muted);font-weight:600;text-align:center;max-width:280px;line-height:1.6;">
+        🔄 Status diperbarui otomatis. Buka kembali halaman ini untuk cek status terbaru.
+    </p>
+
     <div class="success-actions">
         <button class="btn-share-wa" id="btn-share-wa" onclick="shareViaWA()">
             <i class="fa-brands fa-whatsapp"></i> Bagikan ke Teman via WhatsApp
@@ -465,7 +469,7 @@
         <div class="status-banner" onclick="openStatusModal()">
             <i class="fa-solid fa-clock-rotate-left"></i>
             <div class="sb-text">
-                <h4>Ada pesanan aktif</h4>
+                <h4>Ada pesanan aktif — Tap untuk cek status</h4>
                 <p id="status-banner-text">Menunggu konfirmasi kasir…</p>
             </div>
             <i class="fa-solid fa-chevron-right" style="color:var(--primary);font-size:13px;"></i>
@@ -504,7 +508,7 @@
             </div>
             <div class="qm-note">
                 <label>Catatan untuk produk ini (opsional)</label>
-                <textarea id="qm-note" rows="2" placeholder="Cth: gula dikit, tanpa es..."></textarea>
+                <textarea id="qm-note" rows="2" placeholder="Cth: gula dikit, tanpa es..." autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
             </div>
             <button class="btn-add-to-cart" id="btn-add-to-cart" onclick="saveQtyToCart()">
                 <i class="fa-solid fa-basket-shopping"></i> Tambah ke Keranjang
@@ -528,11 +532,11 @@
             <div class="info-form">
                 <div>
                     <label>Nama Pemesan</label>
-                    <input type="text" id="input-nama" placeholder="Nama kamu..." style="text-transform:capitalize;" oninput="this.value=this.value">
+                    <input type="text" id="input-nama" placeholder="Nama kamu..." style="text-transform:capitalize;" oninput="this.value=this.value" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
                 </div>
                 <div>
                     <label>Nomor HP / WhatsApp</label>
-                    <input type="tel" id="input-hp" placeholder="08xxxxxxxxxx" inputmode="tel" style="text-transform:none;" oninput="this.value=this.value.replace(/[^0-9+]/g,'')">
+                    <input type="tel" id="input-hp" placeholder="08xxxxxxxxxx" inputmode="numeric" style="text-transform:none;" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" autocomplete="off" spellcheck="false">
                 </div>
                 <div>
                     <label>Tipe Pesanan</label>
@@ -1217,8 +1221,12 @@ function shareViaWA() {
 }
 
 function resetApp() {
-    clearActiveOrder();
+    // Jangan clearActiveOrder — biarkan status pesanan tetap aktif
     document.getElementById('success-screen').classList.remove('show');
+    // Reset cart & badge
+    cart = {};
+    updateCartBadge();
+    renderCartModal();
     // Reset form
     document.getElementById('input-nama').value = '';
     document.getElementById('input-hp').value = '';
@@ -1227,11 +1235,25 @@ function resetApp() {
     document.getElementById('ot-pickup').classList.remove('selected');
     document.getElementById('pickup-time-wrap').style.display = 'none';
     document.querySelectorAll('.time-chip').forEach(el => el.classList.remove('selected'));
+    // Tampilkan banner status jika masih ada pesanan aktif
+    if (activeOrderCode) {
+        document.getElementById('status-banner-wrap').style.display = 'block';
+    }
 }
 
 // ── START ────────────────────────────────────────────────────
 initApp();
 if (activeOrderCode) startStatusPoll();
+
+// ── DISABLE PULL-TO-REFRESH ──────────────────────────────────
+let _touchStartY = 0;
+document.addEventListener('touchstart', e => { _touchStartY = e.touches[0].clientY; }, { passive: true });
+document.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - _touchStartY;
+    if (dy > 0 && (document.scrollingElement.scrollTop === 0 || document.documentElement.scrollTop === 0)) {
+        e.preventDefault();
+    }
+}, { passive: false });
 
 // ── PWA ──────────────────────────────────────────────────────
 let _pwaPrompt = null;

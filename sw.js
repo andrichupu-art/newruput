@@ -1,9 +1,14 @@
-const CACHE_NAME = 'freshjuice-v1';
+const CACHE_NAME = 'newruput-v2.0.0';
 const ASSETS = [
-  './index.html',
-  './manifest.json',
-  './order.html',
-  './manifest-order.json'
+  'index.html',
+  'order.html',
+  'manifest.json',
+  'manifest-order.json',
+  'LOGO.png',
+  'icon-192.png',
+  'icon-512.png',
+  'icon-maskable-192.png',
+  'icon-maskable-512.png'
 ];
 
 // Install: cache semua asset
@@ -14,7 +19,7 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activate: hapus cache lama
+// Activate: hapus semua cache lama
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>

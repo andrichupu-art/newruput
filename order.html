@@ -866,6 +866,15 @@ async function sendOrder() {
         );
         if (iErr) throw iErr;
 
+        // Kurangi stok produk yang dipesan
+        for (const item of items) {
+            const p = products.find(x => x.id == item.product_id);
+            if (!p) continue;
+            const newStock = p.stock - item.qty;
+            await supa.from('products').update({ stock: newStock }).eq('id', p.id);
+            p.stock = newStock; // update lokal juga
+        }
+
         // Simpan kode di localStorage agar bisa cek status
         activeOrderCode = code;
         localStorage.setItem('fj_order_code', code);

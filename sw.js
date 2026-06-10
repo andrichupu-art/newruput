@@ -1,17 +1,14 @@
-const CACHE_NAME = 'newruput-v2.0.0';
+const CACHE_NAME = 'kasir-v2026061001';
 const ASSETS = [
-  'index.html',
-  'order.html',
-  'manifest.json',
-  'manifest-order.json',
-  'LOGO.png',
-  'icon-192.png',
-  'icon-512.png',
-  'icon-maskable-192.png',
-  'icon-maskable-512.png'
+  './index.html',
+  './manifest.json',
+  './LOGO.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png'
 ];
 
-// Install: cache semua asset
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
@@ -19,7 +16,6 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activate: hapus semua cache lama
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -29,7 +25,6 @@ self.addEventListener('activate', e => {
   e.waitUntil(clients.claim());
 });
 
-// Fetch: Network First → fallback ke cache
 self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(e.request)

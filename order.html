@@ -11,8 +11,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="NEWRUPUT JUICE">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Preconnect ke CDN agar koneksi siap lebih awal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <!-- Font hanya 3 weight yang benar-benar dipakai -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome: load non-blocking -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         :root {
@@ -227,8 +235,6 @@
             width: 100%; max-height: 90vh; overflow-y: auto;
             padding: 0 0 calc(20px + env(safe-area-inset-bottom, 0px));
             animation: slideUp .28s cubic-bezier(.32,1.2,.68,1);
-            /* overflow-x visible agar dropdown absolut tidak ter-clip */
-            overflow-x: visible;
         }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .sheet-handle { width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 12px auto 0; }
@@ -264,7 +270,7 @@
         .btn-add-to-cart:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
         /* ── CART MODAL ── */
-        .cart-modal-inner { padding: 20px; padding-bottom: 40px; display: flex; flex-direction: column; gap: 16px; }
+        .cart-modal-inner { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
         .cart-modal-title { font-size: 18px; font-weight: 900; }
         .cart-item-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
         .cart-item-row:last-of-type { border-bottom: none; }
@@ -316,7 +322,7 @@
         .time-dropdown-btn.open .tdb-arrow { transform: rotate(180deg); }
 
         .time-dropdown-list {
-            position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 400;
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 300;
             background: white; border-radius: 14px; border: 1.5px solid var(--border);
             box-shadow: 0 8px 24px rgba(0,0,0,0.12); overflow: hidden;
             display: none; max-height: 260px; overflow-y: auto;
@@ -726,6 +732,7 @@ let statusPollTimer = null;
 let realtimeChannel = null;
 let isMember        = false;
 let pendingOrderData = null; // simpan data order sementara sebelum bayar
+let _memberCache     = {}; // cache hasil cek member { phone: true/false }
 
 const MENU_GROUPS = [
     { key:'JUICE', label:'Juice', emoji:'🧃' },
@@ -1043,8 +1050,16 @@ async function openPaymentModal(hp, total) {
     document.getElementById('proof-file').value = '';
     document.getElementById('pay-total-label').textContent = fmtRp(total);
     try {
-        const { data } = await supa.from('members').select('id,name').eq('phone', hp).maybeSingle();
-        if (data) {
+        // Gunakan cache jika nomor sudah pernah dicek
+        let memberData = null;
+        if (hp in _memberCache) {
+            memberData = _memberCache[hp] ? { cached: true } : null;
+        } else {
+            const { data } = await supa.from('members').select('id,name').eq('phone', hp).maybeSingle();
+            _memberCache[hp] = !!data;
+            memberData = data;
+        }
+        if (memberData) {
             isMember = true;
             document.getElementById('member-badge').style.display = 'flex';
             document.getElementById('pay-qris-section').style.display = 'none';
@@ -1110,13 +1125,14 @@ async function confirmPayment() {
         if (oErr) throw oErr;
         const { error: iErr } = await supa.from('order_items').insert(items.map(i => ({ ...i, order_id: orderRow.id })));
         if (iErr) throw iErr;
-        for (const item of items) {
+        // Update stock paralel (lebih cepat dari sequential loop)
+        await Promise.all(items.map(item => {
             const p = products.find(x => x.id == item.product_id);
-            if (!p) continue;
+            if (!p) return Promise.resolve();
             const ns = p.stock - item.qty;
-            await supa.from('products').update({ stock: ns }).eq('id', p.id);
             p.stock = ns;
-        }
+            return supa.from('products').update({ stock: ns }).eq('id', p.id);
+        }));
         activeOrderCode = code;
         localStorage.setItem('fj_order_code', code);
         localStorage.setItem('fj_order_ts', Date.now().toString());
@@ -1261,9 +1277,24 @@ function startStatusPoll() {
         })
         .subscribe((status, err) => {
             console.log('[Realtime] status:', status, err || '');
+            if (status === 'SUBSCRIBED') {
+                // Realtime aktif → polling tidak perlu, hemat resource
+                clearInterval(statusPollTimer);
+                statusPollTimer = null;
+                console.log('[Poll] dihentikan, Realtime sudah aktif');
+            }
+            if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                // Realtime putus → aktifkan polling sebagai fallback
+                if (!statusPollTimer) {
+                    console.log('[Poll] Realtime putus, polling diaktifkan');
+                    statusPollTimer = setInterval(async () => {
+                        await checkOrderStatus();
+                    }, 3000);
+                }
+            }
         });
 
-    // ── Polling 3 detik sebagai fallback ──
+    // Polling awal sebagai fallback sebelum Realtime connect
     statusPollTimer = setInterval(async () => {
         await checkOrderStatus();
     }, 3000);
@@ -1358,15 +1389,10 @@ function resetApp() {
 initApp();
 if (activeOrderCode) startStatusPoll();
 
-// ── DISABLE PULL-TO-REFRESH (tanpa block scroll di dalam modal) ──
+// ── DISABLE PULL-TO-REFRESH ──────────────────────────────────
 let _touchStartY = 0;
 document.addEventListener('touchstart', e => { _touchStartY = e.touches[0].clientY; }, { passive: true });
 document.addEventListener('touchmove', e => {
-    // Jangan blokir jika touch ada di dalam elemen yang bisa scroll (modal, dropdown, dll)
-    const target = e.target;
-    const isInsideScrollable = target.closest('.modal-sheet, .time-dropdown-list, .main-scroll, #main-scroll');
-    if (isInsideScrollable) return; // biarkan scroll modal berjalan normal
-
     const dy = e.touches[0].clientY - _touchStartY;
     if (dy > 0 && (document.scrollingElement.scrollTop === 0 || document.documentElement.scrollTop === 0)) {
         e.preventDefault();

@@ -1155,7 +1155,7 @@ const _isInApp = window.matchMedia('(display-mode: standalone)').matches || navi
 // Register service worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        navigator.serviceWorker.register('./sw-order.js').catch(() => {});
     });
 }
 

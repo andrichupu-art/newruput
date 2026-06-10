@@ -37,7 +37,7 @@
             position: fixed; inset: 0; background: white; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
         }
-        #loader .logo-wrap { font-size: 52px; }
+        #loader .logo-wrap { font-size: 52px; line-height: 1; }
         #loader h2 { font-size: 20px; font-weight: 900; color: var(--primary-dark); }
         #loader p { font-size: 13px; color: var(--text-muted); font-weight: 600; }
         .spin { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: rot .8s linear infinite; }
@@ -382,7 +382,7 @@
 
 <!-- LOADER -->
 <div id="loader">
-    <div class="logo-wrap">🧃</div>
+    <div class="logo-wrap"><img src="LOGO.png" style="width:90px;height:90px;object-fit:contain;"></div>
     <h2>NEWRUPUT JUICE</h2>
     <p>Memuat menu…</p>
     <div class="spin"></div>
@@ -423,7 +423,7 @@
 
 <!-- HEADER -->
 <div class="top-header">
-    <div class="header-logo">🧃</div>
+    <div class="header-logo"><img src="LOGO.png" style="width:48px;height:48px;object-fit:contain;"></div>
     <div class="header-text">
         <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
@@ -1199,7 +1199,7 @@ function pwaDismiss() {
 </script>
 <!-- PWA Install Banner -->
 <div id="pwa-banner">
-    <div class="pwa-icon">🍹</div>
+    <div class="pwa-icon"><img src="LOGO.png" style="width:48px;height:48px;object-fit:contain;"></div>
     <div class="pwa-text">
         <strong>Tambah ke Layar Utama</strong>
         <span>Buka NEWRUPUT JUICE lebih cepat, tanpa browser!</span>

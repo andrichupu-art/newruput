@@ -361,8 +361,8 @@
 
 <!-- LOADER -->
 <div id="loader">
-    <div class="logo-wrap">🧃</div>
-    <h2>FreshJuice</h2>
+    <img src="./LOGO.png" alt="NewRuput Juice" style="width:80px;height:80px;object-fit:contain;">
+    <h2>NewRuput Juice</h2>
     <p>Memuat menu…</p>
     <div class="spin"></div>
 </div>
@@ -402,9 +402,9 @@
 
 <!-- HEADER -->
 <div class="top-header">
-    <div class="header-logo">🧃</div>
+    <img src="./LOGO.png" alt="NewRuput Juice" style="height:44px;width:44px;object-fit:contain;filter:brightness(0) invert(1);">
     <div class="header-text">
-        <h1>FreshJuice</h1>
+        <h1>NewRuput Juice</h1>
         <p>Pesan langsung dari HP kamu</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
@@ -865,15 +865,6 @@ async function sendOrder() {
             items.map(i => ({ ...i, order_id: orderRow.id }))
         );
         if (iErr) throw iErr;
-
-        // Kurangi stok produk yang dipesan
-        for (const item of items) {
-            const p = products.find(x => x.id == item.product_id);
-            if (!p) continue;
-            const newStock = p.stock - item.qty;
-            await supa.from('products').update({ stock: newStock }).eq('id', p.id);
-            p.stock = newStock; // update lokal juga
-        }
 
         // Simpan kode di localStorage agar bisa cek status
         activeOrderCode = code;

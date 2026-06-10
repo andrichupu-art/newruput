@@ -1068,7 +1068,22 @@ async function checkOrderStatus() {
             .eq('code', activeOrderCode).single();
         if (error) { console.error('[Poll] error:', error.message, error.code); return; }
         if (!data) { console.warn('[Poll] data null untuk code:', activeOrderCode); return; }
-        if (data.status === 'done') { clearActiveOrder(); return; }
+        if (data.status === 'done') {
+
+    const wrap = document.getElementById('status-banner-wrap');
+    const txt = document.getElementById('status-banner-text');
+
+    if (wrap) wrap.style.display = 'block';
+    if (txt) txt.textContent = '🎉 Pesanan selesai';
+
+    const ssTxt = document.getElementById('success-status-text');
+    const ssIcon = document.getElementById('success-status-icon');
+
+    if (ssTxt) ssTxt.textContent = 'Pesanan selesai';
+    if (ssIcon) ssIcon.textContent = '🎉';
+
+    return;
+}
 
         const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
         const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };
@@ -1108,7 +1123,22 @@ function startStatusPoll() {
             const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
             const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };
 
-            if (data.status === 'done') { clearActiveOrder(); return; }
+            if (data.status === 'done') {
+
+    const wrap = document.getElementById('status-banner-wrap');
+    const txt = document.getElementById('status-banner-text');
+
+    if (wrap) wrap.style.display = 'block';
+    if (txt) txt.textContent = '🎉 Pesanan selesai';
+
+    const ssTxt = document.getElementById('success-status-text');
+    const ssIcon = document.getElementById('success-status-icon');
+
+    if (ssTxt) ssTxt.textContent = 'Pesanan selesai';
+    if (ssIcon) ssIcon.textContent = '🎉';
+
+    return;
+}
 
             const wrap = document.getElementById('status-banner-wrap');
             const txt  = document.getElementById('status-banner-text');

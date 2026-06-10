@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FreshJuice — Pesan Online</title>
+    <title>NEWRUPUT JUICE — Pesan Online</title>
     <meta name="theme-color" content="#16A34A">
     <link rel="manifest" href="manifest-order.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="FreshJuice">
+    <meta name="apple-mobile-web-app-title" content="NEWRUPUT JUICE">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -355,14 +355,35 @@
         .step.done .step-label, .step.active .step-label { color: var(--text-main); }
         .step-line { flex: 1; height: 2px; background: var(--border); margin-bottom: 18px; }
         .step-line.done { background: var(--primary); }
+
+        /* ── PAYMENT MODAL ── */
+        #payment-modal .modal-sheet { max-height: 92dvh; overflow-y: auto; }
+        .pay-section { background: #f8faf9; border-radius: 14px; padding: 14px; border: 1px solid var(--border); margin-bottom: 12px; }
+        .pay-section h4 { font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
+        .qris-img { width: 180px; height: 180px; object-fit: contain; border-radius: 12px; border: 2px solid var(--border); display: block; margin: 0 auto 8px; background: white; padding: 8px; }
+        .pay-amount { background: var(--primary); color: white; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px; }
+        .pay-amount span { font-size: 11px; font-weight: 600; opacity: 0.85; display: block; }
+        .pay-amount strong { font-size: 22px; font-weight: 900; }
+        .upload-area { border: 2px dashed var(--primary); border-radius: 14px; padding: 20px; text-align: center; cursor: pointer; background: var(--primary-light); position: relative; }
+        .upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .upload-area p { font-size: 12px; font-weight: 700; color: var(--primary-dark); margin-top: 6px; }
+        .upload-area .upload-icon { font-size: 32px; }
+        .upload-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 12px; display: none; margin-top: 10px; }
+        .member-badge { background: linear-gradient(135deg,#16A34A,#15803D); color: white; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .member-badge .mb-icon { font-size: 24px; }
+        .member-badge .mb-text { font-size: 12px; font-weight: 700; }
+        .member-badge .mb-text span { font-size: 10px; font-weight: 500; opacity: 0.85; display: block; }
+        .unpaid-notice { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 12px; padding: 12px 14px; margin: 8px 0; display: flex; gap: 10px; align-items: flex-start; }
+        .unpaid-notice .un-icon { font-size: 18px; flex-shrink: 0; }
+        .unpaid-notice p { font-size: 11px; font-weight: 700; color: #991b1b; line-height: 1.6; margin: 0; }
     </style>
 </head>
 <body>
 
 <!-- LOADER -->
 <div id="loader">
-    <img src="LOGO.png" alt="NewRuput Juice" style="width:80px;height:80px;object-fit:contain;">
-    <h2>NewRuput Juice</h2>
+    <div class="logo-wrap">🧃</div>
+    <h2>NEWRUPUT JUICE</h2>
     <p>Memuat menu…</p>
     <div class="spin"></div>
 </div>
@@ -402,9 +423,9 @@
 
 <!-- HEADER -->
 <div class="top-header">
-    <img src="LOGO.png" alt="NewRuput Juice" style="height:44px;width:44px;object-fit:contain;filter:brightness(0) invert(1);">
+    <div class="header-logo">🧃</div>
     <div class="header-text">
-        <h1>NewRuput Juice</h1>
+        <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
@@ -549,6 +570,69 @@
     </div>
 </div>
 
+<!-- ── PAYMENT MODAL ── -->
+<div class="modal-bg" id="payment-modal" onclick="if(event.target===this)closePaymentModal()">
+    <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:0;">
+
+            <div style="font-size:17px;font-weight:900;margin-bottom:14px;">💳 Pembayaran</div>
+
+            <!-- Badge member (hidden by default) -->
+            <div class="member-badge" id="member-badge" style="display:none;">
+                <div class="mb-icon">⭐</div>
+                <div class="mb-text">
+                    Kamu adalah Member!
+                    <span>Bayar di tempat saat mengambil pesanan</span>
+                </div>
+            </div>
+
+            <!-- Jumlah yang harus dibayar -->
+            <div class="pay-amount">
+                <span>Total yang harus dibayar</span>
+                <strong id="pay-total-label">Rp 0</strong>
+            </div>
+
+            <!-- Info pembayaran non-member -->
+            <div id="pay-qris-section">
+                <div class="pay-section">
+                    <h4>📱 Scan QRIS di bawah ini</h4>
+                    <img src="QRIS.png" alt="QRIS" class="qris-img" onerror="this.style.display='none';document.getElementById('qris-fallback').style.display='block'">
+                    <div id="qris-fallback" style="display:none;text-align:center;padding:12px;color:var(--text-muted);font-size:12px;">
+                        ⚠️ Gambar QRIS belum tersedia.<br>Taruh file <b>QRIS.png</b> di folder yang sama.
+                    </div>
+                    <p style="font-size:11px;color:var(--text-muted);text-align:center;font-weight:600;margin-top:6px;">Atau transfer ke rekening yang tertera di toko</p>
+                </div>
+
+                <!-- Upload bukti -->
+                <div class="pay-section">
+                    <h4>📤 Upload Bukti Pembayaran</h4>
+                    <div class="unpaid-notice">
+                        <div class="un-icon">⚠️</div>
+                        <p>Mohon maaf, pesanan belum bisa diproses sebelum bukti pembayaran diunggah dan diverifikasi oleh kasir.</p>
+                    </div>
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" accept="image/*" id="proof-file" onchange="previewProof(event)">
+                        <div class="upload-icon">📷</div>
+                        <p>Tap untuk pilih foto bukti transfer</p>
+                    </div>
+                    <img id="upload-preview" class="upload-preview" alt="Preview bukti">
+                    <p id="upload-status" style="font-size:11px;font-weight:700;color:var(--text-muted);margin-top:8px;text-align:center;"></p>
+                </div>
+            </div>
+
+            <button id="btn-confirm-pay" onclick="confirmPayment()" disabled
+                style="background:var(--primary);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:800;cursor:pointer;font-family:'Poppins',sans-serif;opacity:0.5;transition:opacity .2s;">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Pesanan
+            </button>
+            <button onclick="closePaymentModal()"
+                style="background:var(--bg);border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;">
+                Batal
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 const SUPA_URL  = 'https://yemxzcouelsejceizozu.supabase.co';
@@ -565,6 +649,9 @@ let orderType    = null;   // 'pickup'
 let pickupTime   = null;   // misal '11.00'
 let activeOrderCode = localStorage.getItem('fj_order_code') || null;
 let statusPollTimer = null;
+let isMember        = false;
+let proofUploaded   = false;
+let pendingOrderData = null; // simpan data order sementara sebelum bayar
 
 const MENU_GROUPS = [
     { key:'SEMUA', label:'Semua Menu', emoji:'🏪' },
@@ -841,52 +928,105 @@ document.addEventListener('DOMContentLoaded', () => {
 async function sendOrder() {
     const nama  = document.getElementById('input-nama').value.trim();
     const hp    = document.getElementById('input-hp').value.trim();
-    const tableInfo = `Diambil jam ${pickupTime}`;
-    const code  = genCode();
-    const btn   = document.getElementById('btn-send-order');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim…';
-
     const items = Object.keys(cart).map(id => {
         const p = products.find(x => x.id == id);
         return { product_id: parseInt(id), product_name: p.name, qty: cart[id].qty, note: cart[id].note||'', price: p.price, subtotal: p.price * cart[id].qty };
     });
     const total = cartTotal();
+    const code  = genCode();
+    pendingOrderData = { nama, hp, tableInfo: `Diambil jam ${pickupTime}`, code, items, total };
+    await openPaymentModal(hp, total);
+}
 
+async function openPaymentModal(hp, total) {
+    proofUploaded = false;
+    isMember = false;
+    document.getElementById('upload-preview').style.display = 'none';
+    document.getElementById('upload-status').textContent = '';
+    document.getElementById('proof-file').value = '';
+    document.getElementById('pay-total-label').textContent = fmtRp(total);
     try {
+        const { data } = await supa.from('members').select('id,name').eq('phone', hp).maybeSingle();
+        if (data) {
+            isMember = true;
+            document.getElementById('member-badge').style.display = 'flex';
+            document.getElementById('pay-qris-section').style.display = 'none';
+            document.getElementById('btn-confirm-pay').disabled = false;
+            document.getElementById('btn-confirm-pay').style.opacity = '1';
+        } else {
+            isMember = false;
+            document.getElementById('member-badge').style.display = 'none';
+            document.getElementById('pay-qris-section').style.display = 'block';
+            document.getElementById('btn-confirm-pay').disabled = true;
+            document.getElementById('btn-confirm-pay').style.opacity = '0.5';
+        }
+    } catch(e) { isMember = false; }
+    document.getElementById('payment-modal').classList.add('open');
+    closeCartModal();
+}
+
+function closePaymentModal() {
+    document.getElementById('payment-modal').classList.remove('open');
+}
+
+function previewProof(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const preview = document.getElementById('upload-preview');
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    document.getElementById('upload-status').textContent = '✅ Foto dipilih: ' + file.name;
+    proofUploaded = true;
+    document.getElementById('btn-confirm-pay').disabled = false;
+    document.getElementById('btn-confirm-pay').style.opacity = '1';
+}
+
+async function confirmPayment() {
+    const btn = document.getElementById('btn-confirm-pay');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses…';
+    const { nama, hp, tableInfo, code, items, total } = pendingOrderData;
+    let proofUrl = null;
+    try {
+        if (!isMember) {
+            const file = document.getElementById('proof-file').files[0];
+            if (!file) { toast('⚠️ Pilih foto bukti pembayaran dulu!'); btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Pesanan'; return; }
+            const ext = file.name.split('.').pop();
+            const fileName = `proof_${code}_${Date.now()}.${ext}`;
+            const { error: upErr } = await supa.storage.from('payment-proofs').upload(fileName, file, { contentType: file.type });
+            if (upErr) throw upErr;
+            const { data: urlData } = supa.storage.from('payment-proofs').getPublicUrl(fileName);
+            proofUrl = urlData.publicUrl;
+        }
         const { data: orderRow, error: oErr } = await supa.from('orders').insert({
             code, customer_name: nama, customer_phone: hp,
-            order_type: orderType, table_info: tableInfo,
-            total, status: 'pending'
+            order_type: orderType, table_info: tableInfo, total, status: 'pending',
+            payment_status: isMember ? 'member' : 'waiting_verification',
+            payment_proof_url: proofUrl,
+            is_member: isMember
         }).select().single();
         if (oErr) throw oErr;
-
-        const { error: iErr } = await supa.from('order_items').insert(
-            items.map(i => ({ ...i, order_id: orderRow.id }))
-        );
+        const { error: iErr } = await supa.from('order_items').insert(items.map(i => ({ ...i, order_id: orderRow.id })));
         if (iErr) throw iErr;
-
-        // Simpan kode di localStorage agar bisa cek status
+        for (const item of items) {
+            const p = products.find(x => x.id == item.product_id);
+            if (!p) continue;
+            const ns = p.stock - item.qty;
+            await supa.from('products').update({ stock: ns }).eq('id', p.id);
+            p.stock = ns;
+        }
         activeOrderCode = code;
         localStorage.setItem('fj_order_code', code);
-
-        // Tampilkan success screen
         document.getElementById('success-code').textContent = code;
-        document.getElementById('success-type-info').textContent =
-            `🏪 Diambil ke Toko — Jam ${pickupTime}`;
+        document.getElementById('success-type-info').textContent = `🏪 Diambil ke Toko — Jam ${pickupTime}`;
+        closePaymentModal();
         document.getElementById('success-screen').classList.add('show');
-
-        // Reset cart
         cart = {};
+        renderCart();
         renderGrid();
-        updateCartBadge();
-        closeCartModal();
-
-        // Mulai polling status
         startStatusPoll();
-
     } catch(e) {
-        alert('Gagal mengirim pesanan: ' + e.message);
+        toast('❌ Gagal: ' + e.message);
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Pesanan';
     }
@@ -969,7 +1109,7 @@ function shareViaWA() {
     const orderLink = window.location.href.split('?')[0]; // URL bersih tanpa param
     const code = document.getElementById('success-code').textContent;
     const typeInfo = document.getElementById('success-type-info').textContent;
-    const text = `Hei, tadi aku order di FreshJuice langsung dari HP, gak perlu antri! 🍹\n\nOrder online langsung di sini:\n👉 ${orderLink}\n\nPesanan masuk otomatis ke kasir, mudah banget! Coba deh 😄`;
+    const text = `Hei, tadi aku order di NEWRUPUT JUICE langsung dari HP, gak perlu antri! 🍹\n\nOrder online langsung di sini:\n👉 ${orderLink}\n\nPesanan masuk otomatis ke kasir, mudah banget! Coba deh 😄`;
     const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
 }
@@ -1062,11 +1202,11 @@ function pwaDismiss() {
     <div class="pwa-icon">🍹</div>
     <div class="pwa-text">
         <strong>Tambah ke Layar Utama</strong>
-        <span>Buka FreshJuice lebih cepat, tanpa browser!</span>
+        <span>Buka NEWRUPUT JUICE lebih cepat, tanpa browser!</span>
     </div>
     <button class="pwa-btn-install" onclick="pwaTriggerInstall()">Pasang</button>
     <button class="pwa-btn-close" onclick="pwaDismiss()" aria-label="Tutup">✕</button>
 </div>
-<!-- test -->
+
 </body>
 </html>

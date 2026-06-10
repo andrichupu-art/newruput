@@ -423,6 +423,16 @@
     </div>
     <p id="success-type-info" style="font-size:13px;color:var(--text-main);font-weight:700;"></p>
     <p style="font-size:12px;">Tunjukkan kode ini ke kasir saat mengambil pesanan.</p>
+
+    <!-- Live status di success screen -->
+    <div id="success-status-wrap" style="background:var(--primary-light);border:1.5px solid var(--primary);border-radius:12px;padding:10px 16px;width:100%;max-width:320px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;" id="success-status-icon">⏳</span>
+        <div style="flex:1;text-align:left;">
+            <div style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.06em;">Status Pesanan</div>
+            <div style="font-size:13px;font-weight:800;color:var(--primary-dark);" id="success-status-text">Menunggu konfirmasi kasir…</div>
+        </div>
+    </div>
+
     <div class="success-actions">
         <button class="btn-share-wa" id="btn-share-wa" onclick="shareViaWA()">
             <i class="fa-brands fa-whatsapp"></i> Bagikan ke Teman via WhatsApp
@@ -1059,10 +1069,17 @@ async function checkOrderStatus() {
         if (data.status === 'done') { clearActiveOrder(); return; }
 
         const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
+        const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };
         const wrap = document.getElementById('status-banner-wrap');
         const txt  = document.getElementById('status-banner-text');
         wrap.style.display = 'block';
         txt.textContent = statusLabels[data.status] || data.status;
+
+        // Update juga di success screen (jika masih terbuka)
+        const ssTxt  = document.getElementById('success-status-text');
+        const ssIcon = document.getElementById('success-status-icon');
+        if (ssTxt)  ssTxt.textContent  = statusLabels[data.status] || data.status;
+        if (ssIcon) ssIcon.textContent = statusIcons[data.status] || '⏳';
     } catch(e) {}
 }
 

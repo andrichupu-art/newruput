@@ -1399,14 +1399,16 @@ function resetFilterLaporan() {
     updateLaporanUI();
 }
 function updateRiwayatUI() {
-    const fd  = document.getElementById('filter-riwayat').value;
-    const txs = fd ? transactionHistory.filter(t => t.date === fd) : transactionHistory;
+    const fd    = document.getElementById('filter-riwayat').value;
     const tbody = document.getElementById('history-table-body');
     tbody.innerHTML = '';
-    let no=1, total=0;
+    let no = 1, total = 0;
+
+    // ── Transaksi kasir (POS) ─────────────────────────────
+    const txs = fd ? transactionHistory.filter(t => t.date === fd) : transactionHistory;
     txs.forEach(tx => {
         total += tx.total;
-        tx.items.forEach(item => {
+        tx.items.forEach((item, idx) => {
             tbody.innerHTML += `
                 <tr>
                     <td>${no++}</td>
@@ -1417,8 +1419,34 @@ function updateRiwayatUI() {
                 </tr>`;
         });
     });
-    document.getElementById('total-pendapatan-tabel').innerText = 'Rp '+total.toLocaleString('id-ID');
-    if (!txs.length)
+
+    // ── Order Online (dari order.html) — status done/ready ─
+    const doneOrders = allOrders.filter(o => {
+        if (!['done','ready'].includes(o.status)) return false;
+        if (!fd) return true;
+        const wib = new Date(new Date(o.created_at).getTime() + 7 * 3600000);
+        return wib.toISOString().substring(0, 10) === fd;
+    });
+    if (doneOrders.length > 0) {
+        tbody.innerHTML += `<tr><td colspan="5" style="background:#EFF6FF;padding:8px 12px;font-size:11px;font-weight:800;color:#3B82F6;letter-spacing:.05em;">🛒 ORDER ONLINE</td></tr>`;
+        doneOrders.forEach(o => {
+            const items = o.order_items || [];
+            total += o.total || 0;
+            items.forEach(item => {
+                tbody.innerHTML += `
+                    <tr style="background:#F8FAFF;">
+                        <td>${no++}</td>
+                        <td>${item.product_name} <span style="font-size:10px;color:#3B82F6;font-weight:700;">[Online · ${o.customer_name || '-'}]</span></td>
+                        <td style="text-align:center;"><span class="stock-highlight">${item.qty}</span></td>
+                        <td>Rp ${(item.price||0).toLocaleString('id-ID')}</td>
+                        <td style="color:var(--primary-dark);font-weight:700;">Rp ${(item.subtotal||0).toLocaleString('id-ID')}</td>
+                    </tr>`;
+            });
+        });
+    }
+
+    document.getElementById('total-pendapatan-tabel').innerText = 'Rp ' + total.toLocaleString('id-ID');
+    if (!txs.length && !doneOrders.length)
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Tidak ada transaksi.</td></tr>`;
 }
 

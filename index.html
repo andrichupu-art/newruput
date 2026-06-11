@@ -2659,73 +2659,9 @@ async function ubahStatusOrder(id, status) {
         if (error) throw error;
         const idx = allOrders.findIndex(o => o.id === id);
         if (idx !== -1) allOrders[idx].status = status;
-
-        // ── Saat pesanan selesai: catat ke tabel transactions ──
-        if (status === 'done' && order) {
-            // Fetch ulang order + items agar data pasti lengkap (bukan dari cache allOrders)
-            const { data: freshOrder, error: foErr } = await supa
-                .from('orders')
-                .select('*, order_items(*)')
-                .eq('id', id)
-                .single();
-
-            if (foErr) {
-                console.error('Gagal fetch order untuk dicatat:', foErr.message);
-                showToast('⚠️ Pesanan selesai, tapi gagal masuk riwayat!');
-            } else {
-                const dateStr    = getFormattedDate(new Date());
-                const orderItems = freshOrder.order_items || [];
-                const total      = freshOrder.total || orderItems.reduce((s, i) => s + (i.subtotal || 0), 0);
-
-                console.log('[Riwayat] order_items count:', orderItems.length, orderItems);
-
-                const { data: txData, error: txErr } = await supa
-                    .from('transactions')
-                    .insert({ date: dateStr, total })
-                    .select()
-                    .single();
-
-                if (txErr) {
-                    console.error('Gagal insert transactions:', txErr.message);
-                    showToast('⚠️ Gagal masuk riwayat: ' + txErr.message);
-                } else {
-                    if (orderItems.length > 0) {
-                        const { error: itemErr } = await supa.from('transaction_items').insert(
-                            orderItems.map(i => ({
-                                transaction_id: txData.id,
-                                product_name: i.product_name,
-                                qty: i.qty,
-                                price: i.price || Math.round((i.subtotal || 0) / (i.qty || 1)),
-                                subtotal: i.subtotal || 0
-                            }))
-                        );
-                        if (itemErr) {
-                            console.error('Gagal insert transaction_items:', itemErr.message);
-                            showToast('⚠️ Detail item gagal disimpan: ' + itemErr.message);
-                        }
-                    }
-                    transactionHistory.unshift({
-                        id: txData.id,
-                        date: dateStr,
-                        total,
-                        items: orderItems.map(i => ({
-                            product_name: i.product_name,
-                            qty: i.qty,
-                            price: i.price || Math.round((i.subtotal || 0) / (i.qty || 1)),
-                            subtotal: i.subtotal || 0
-                        }))
-                    });
-                    renderPesananList();
-                    updatePesananBadge();
-                    showToast('📦 Pesanan selesai! Tercatat di riwayat.');
-                    return;
-                }
-            }
-        }
-
         renderPesananList();
         updatePesananBadge();
-        showToast(status === 'processing' ? '🔄 Pesanan diproses!' : status === 'ready' ? '✅ Pesanan siap!' : '📦 Pesanan selesai! Tercatat di riwayat.');
+        showToast(status === 'processing' ? '🔄 Pesanan diproses!' : status === 'ready' ? '✅ Pesanan siap!' : '📦 Pesanan selesai!');
     } catch(e) {
         alert('Gagal update status: ' + e.message);
     }
@@ -3250,9 +3186,24 @@ async function memberHapus(id, name) {
 // ╔══════════════════════════════════════════════════════════╗
 //   SERVICE WORKER (PWA Install)
 // ╚══════════════════════════════════════════════════════════╝
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.update();
+            reg.addEventListener('updatefound', () => {
+                const newSW = reg.installing;
+                newSW.addEventListener('statechange', () => {
+                    if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                        newSW.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                });
+            });
+        }).catch(() => {});
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) { refreshing = true; window.location.reload(); }
+        });
     });
 }
 

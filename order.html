@@ -610,13 +610,13 @@
     <div class="header-text">
         <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
-        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.2.2</p>
+        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.2.3</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
         <i class="fa-solid fa-basket-shopping"></i>
         <div class="hcb-badge" id="hcb-badge"></div>
     </button>
-    <button class="header-chat-btn" id="header-chat-btn" onclick="openChatModal()" style="display:none;">
+    <button class="header-chat-btn" id="header-chat-btn" onclick="openChatModal()">
         <i class="fa-solid fa-comment-dots"></i>
         <span class="hchat-badge" id="hchat-badge"></span>
     </button>
@@ -1764,12 +1764,21 @@ function activateChatFab(orderCode, customerName) {
 
 // ── Buka modal chat ──────────────────────────────────────
 async function openChatModal() {
-    if (!chatOrderCode) return;
     chatUnreadCust = 0;
     updateChatFabBadge();
+    document.getElementById('chat-modal').classList.add('open');
+    if (!chatOrderCode) {
+        document.getElementById('chat-order-label').textContent = 'Chat Kasir';
+        document.getElementById('chat-msgs-container').innerHTML =
+            '<div class="chat-empty-state"><i class="fa-solid fa-comment-dots"></i><p>Chat tersedia setelah kamu<br>mengirim pesanan.</p></div>';
+        document.getElementById('chat-input-order').disabled = true;
+        document.getElementById('chat-send-btn').disabled = true;
+        return;
+    }
+    document.getElementById('chat-input-order').disabled = false;
+    document.getElementById('chat-send-btn').disabled = false;
     document.getElementById('chat-msgs-container').innerHTML =
         '<div class="chat-empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat pesan…</p></div>';
-    document.getElementById('chat-modal').classList.add('open');
     document.getElementById('chat-input-order').value = '';
     await loadChatMsgsCust(chatOrderCode);
     document.getElementById('chat-input-order').focus();

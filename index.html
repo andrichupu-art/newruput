@@ -2659,9 +2659,56 @@ async function ubahStatusOrder(id, status) {
         if (error) throw error;
         const idx = allOrders.findIndex(o => o.id === id);
         if (idx !== -1) allOrders[idx].status = status;
+
+        // ── Saat pesanan selesai: catat ke tabel transactions ──
+        if (status === 'done' && order) {
+            const dateStr = getFormattedDate(new Date());
+            const orderItems = order.order_items || [];
+            const total = order.total || orderItems.reduce((s, i) => s + (i.subtotal || 0), 0);
+
+            const { data: txData, error: txErr } = await supa
+                .from('transactions')
+                .insert({ date: dateStr, total })
+                .select()
+                .single();
+
+            if (txErr) {
+                console.error('Gagal catat transaksi dari pesanan:', txErr.message);
+                showToast('⚠️ Pesanan selesai, tapi gagal masuk riwayat: ' + txErr.message);
+            } else {
+                // Insert item-item transaksi
+                if (orderItems.length > 0) {
+                    const { error: itemErr } = await supa.from('transaction_items').insert(
+                        orderItems.map(i => ({
+                            transaction_id: txData.id,
+                            product_name: i.product_name,
+                            qty: i.qty,
+                            price: i.price || Math.round((i.subtotal || 0) / (i.qty || 1)),
+                            subtotal: i.subtotal || 0
+                        }))
+                    );
+                    if (itemErr) {
+                        console.error('Gagal catat item transaksi:', itemErr.message);
+                    }
+                }
+                // Tambah ke state lokal agar langsung muncul di riwayat tanpa reload
+                transactionHistory.unshift({
+                    id: txData.id,
+                    date: dateStr,
+                    total,
+                    items: orderItems.map(i => ({
+                        product_name: i.product_name,
+                        qty: i.qty,
+                        price: i.price || Math.round((i.subtotal || 0) / (i.qty || 1)),
+                        subtotal: i.subtotal || 0
+                    }))
+                });
+            }
+        }
+
         renderPesananList();
         updatePesananBadge();
-        showToast(status === 'processing' ? '🔄 Pesanan diproses!' : status === 'ready' ? '✅ Pesanan siap!' : '📦 Pesanan selesai!');
+        showToast(status === 'processing' ? '🔄 Pesanan diproses!' : status === 'ready' ? '✅ Pesanan siap!' : '📦 Pesanan selesai! Tercatat di riwayat.');
     } catch(e) {
         alert('Gagal update status: ' + e.message);
     }

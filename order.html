@@ -138,6 +138,22 @@
             border-radius: 9px; display: none; align-items: center; justify-content: center;
             box-shadow: 0 1px 4px rgba(239,68,68,0.5);
         }
+        .header-chat-btn {
+            background: white; border: none; border-radius: 14px;
+            width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: relative; flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header-chat-btn i { font-size: 18px; color: var(--primary-dark); }
+        .hchat-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: var(--danger); color: white;
+            font-size: 9px; font-weight: 800;
+            min-width: 18px; height: 18px; padding: 0 4px;
+            border-radius: 9px; display: none; align-items: center; justify-content: center;
+            box-shadow: 0 1px 4px rgba(239,68,68,0.5);
+        }
+        .hchat-badge.show { display: flex; }
         .hcb-badge.show { display: flex; }
 
         /* ── CATEGORY TABS ── */
@@ -308,31 +324,41 @@
         .ot-btn i { font-size: 22px; }
         .ot-btn.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
         /* ── CUSTOM TIME DROPDOWN ── */
-        /* ── Time Spinner ── */
-        .time-spinner-wrap {
-            display: flex; align-items: center; gap: 0;
-            background: white; border: 2px solid var(--border);
-            border-radius: 14px; overflow: hidden; margin-top: 6px;
-            transition: border-color .18s;
+        .time-dropdown-wrap { position: relative; margin-top: 6px; }
+        .time-dropdown-btn {
+            width: 100%; padding: 13px 16px; border-radius: 12px;
+            border: 2px solid var(--border); background: white;
+            font-size: 14px; font-weight: 700; color: #64748B;
+            cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+            transition: all .18s; font-family: 'Poppins', sans-serif;
         }
-        .time-spinner-wrap.has-value { border-color: var(--primary); background: var(--primary-light); }
-        .time-spinner-btn {
-            width: 48px; height: 52px; border: none; background: transparent;
-            font-size: 18px; color: var(--primary-dark); cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: background .15s; flex-shrink: 0; font-family: inherit;
+        .time-dropdown-btn.selected { border-color: var(--primary); color: var(--primary-dark); background: var(--primary-light); }
+        .time-dropdown-btn .tdb-left { display: flex; align-items: center; gap: 8px; }
+        .time-dropdown-btn .tdb-arrow { font-size: 12px; transition: transform .2s; color: var(--text-muted); }
+        .time-dropdown-btn.open .tdb-arrow { transform: rotate(180deg); }
+
+        .time-dropdown-list {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 300;
+            background: white; border-radius: 14px; border: 1.5px solid var(--border);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); overflow: hidden;
+            display: none; max-height: 260px; overflow-y: auto;
         }
-        .time-spinner-btn:active { background: rgba(22,163,74,0.15); }
-        .time-spinner-btn:disabled { opacity: .3; cursor: not-allowed; }
-        .time-spinner-display {
-            flex: 1; text-align: center; font-size: 20px; font-weight: 900;
-            color: var(--primary-dark); letter-spacing: .02em; user-select: none;
-            padding: 0 4px;
+        .time-dropdown-list.open { display: block; }
+        .tdl-group-label {
+            padding: 8px 14px 4px; font-size: 10px; font-weight: 800;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+            background: #f8fafc;
         }
-        .time-spinner-display.placeholder {
-            font-size: 13px; font-weight: 600; color: var(--text-muted);
+        .tdl-item {
+            padding: 11px 16px; font-size: 13px; font-weight: 700; color: #374151;
+            cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: background .12s; border-bottom: 1px solid #f1f5f9;
         }
-        .time-spinner-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+        .tdl-item:last-child { border-bottom: none; }
+        .tdl-item:hover, .tdl-item:active { background: var(--primary-light); color: var(--primary-dark); }
+        .tdl-item.selected { background: var(--primary-light); color: var(--primary-dark); font-weight: 800; }
+        .tdl-item .tdl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+        .tdl-item.selected .tdl-dot { background: var(--primary); }
 
         .btn-send-order {
             background: linear-gradient(135deg, #16A34A 0%, #22c55e 100%);
@@ -433,7 +459,7 @@
             cursor: pointer; display: none; align-items: center; justify-content: center;
             transition: transform .15s;
         }
-        #chat-fab.show { display: flex; animation: popIn .4s cubic-bezier(.34,1.56,.64,1); }
+        #chat-fab.show { display: none !important; }
         #chat-fab:active { transform: scale(0.9); }
         .chat-fab-badge {
             position: absolute; top: -5px; right: -5px;
@@ -585,11 +611,15 @@
     <div class="header-text">
         <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
-        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.5.0</p>
+        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.0.2</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
         <i class="fa-solid fa-basket-shopping"></i>
         <div class="hcb-badge" id="hcb-badge"></div>
+    </button>
+    <button class="header-chat-btn" id="header-chat-btn" onclick="openChatModal()" style="display:none;">
+        <i class="fa-solid fa-comment-dots"></i>
+        <span class="hchat-badge" id="hchat-badge"></span>
     </button>
 </div>
 
@@ -689,13 +719,17 @@
                     </div>
                 </div>
                 <div id="pickup-time-wrap" style="display:none;">
-                    <label>🕐 Jam Pengambilan</label>
-                    <div class="time-spinner-wrap" id="time-spinner-wrap">
-                        <button class="time-spinner-btn" id="btn-time-prev" onclick="spinTime(-1)" disabled>&#8679;</button>
-                        <div class="time-spinner-divider"></div>
-                        <div class="time-spinner-display placeholder" id="time-spinner-display">Pilih jam</div>
-                        <div class="time-spinner-divider"></div>
-                        <button class="time-spinner-btn" id="btn-time-next" onclick="spinTime(1)">&#8681;</button>
+                    <label>Jam Pengambilan</label>
+                <div id="pickup-time-grid" style="display:none;"></div>
+                    <div class="time-dropdown-wrap" id="time-dropdown-wrap">
+                        <button class="time-dropdown-btn" id="time-dropdown-btn" onclick="toggleTimeDropdown()">
+                            <span class="tdb-left">
+                                <span>🕐</span>
+                                <span id="time-dropdown-label">Pilih jam pengambilan…</span>
+                            </span>
+                            <span class="tdb-arrow">▼</span>
+                        </button>
+                        <div class="time-dropdown-list" id="time-dropdown-list"></div>
                     </div>
                     <p id="pickup-time-hint" style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;">⏰ Toko buka pukul 10.00 – 20.00</p>
                 </div>
@@ -1128,98 +1162,89 @@ function cartAdjust(id, delta) {
 }
 
 function buildPickupTimeGrid() {
+    const list = document.getElementById('time-dropdown-list');
+
+    // Waktu sekarang dalam WIB (UTC+7)
     const now = new Date();
     const wibNow = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
     const nowMinutes = wibNow.getHours() * 60 + wibNow.getMinutes();
+
+    // Buat semua slot 10.00-20.00
     const allSlots = [];
     for (let h = 10; h <= 20; h++) {
         allSlots.push(String(h).padStart(2,'0') + '.00');
         if (h < 20) allSlots.push(String(h).padStart(2,'0') + '.30');
     }
-    const toMin = t => { const [h,m] = t.split('.').map(Number); return h*60+m; };
-    const slots = allSlots.filter(t => toMin(t) > nowMinutes);
-    window._timeSlots = slots;
 
-    const hint = document.getElementById('pickup-time-hint');
+    // Helper: slot string ke menit
+    const toMin = t => { const [h,m] = t.split('.').map(Number); return h*60+m; };
+
+    // Filter slot yang sudah lewat
+    const slots = allSlots.filter(t => toMin(t) > nowMinutes);
+
+    // Kalau semua slot sudah lewat (toko tutup)
     if (slots.length === 0) {
-        const disp = document.getElementById('time-spinner-display');
-        if (disp) { disp.textContent = 'Toko tutup'; disp.className = 'time-spinner-display placeholder'; }
-        const btnP = document.getElementById('btn-time-prev');
-        const btnN = document.getElementById('btn-time-next');
-        if (btnP) btnP.disabled = true;
-        if (btnN) btnN.disabled = true;
-        if (hint) hint.textContent = '⛔ Toko sudah tutup hari ini';
+        list.innerHTML = '<div class="tdl-group-label" style="padding:12px;text-align:center;color:var(--danger);">⛔ Toko sudah tutup hari ini</div>';
         return;
     }
-    if (hint) {
-        const buka  = (opsData && opsData.jam_buka)  ? opsData.jam_buka.replace(':','.')  : '10.00';
-        const tutup = (opsData && opsData.jam_tutup) ? opsData.jam_tutup.replace(':','.') : '20.00';
-        hint.textContent = '⏰ Toko buka pukul ' + buka + ' – ' + tutup;
-    }
+
+    const groups = [
+        { label: '🌤️ Pagi (10.00 – 11.30)', times: slots.filter(t => toMin(t) < 12*60) },
+        { label: '☀️ Siang (12.00 – 14.30)', times: slots.filter(t => toMin(t) >= 12*60 && toMin(t) < 15*60) },
+        { label: '🌇 Sore (15.00 – 20.00)',  times: slots.filter(t => toMin(t) >= 15*60) },
+    ];
+
+    let html = '';
+    groups.forEach(g => {
+        if (g.times.length === 0) return;
+        html += '<div class="tdl-group-label">' + g.label + '</div>';
+        html += g.times.map(t =>
+            '<div class="tdl-item" onclick="selectPickupTime(\'' + t + '\')" id="ptime-' + t.replace('.','_') + '">' +
+            '<div class="tdl-dot"></div> ' + t + '</div>'
+        ).join('');
+    });
+    list.innerHTML = html;
+
+    // Restore highlight kalau pickupTime masih valid di daftar
     if (pickupTime && slots.includes(pickupTime)) {
-        window._timeIdx = slots.indexOf(pickupTime);
-        renderSpinner();
+        const el = document.getElementById('ptime-' + pickupTime.replace('.','_'));
+        if (el) el.classList.add('selected');
     } else if (pickupTime && !slots.includes(pickupTime)) {
+        // Jam yang dipilih sudah lewat, reset
         pickupTime = null;
+        document.getElementById('time-dropdown-label').textContent = 'Pilih jam pengambilan…';
+        const btn = document.getElementById('time-dropdown-btn');
+        btn.classList.remove('selected');
         validateSendButton();
-        resetSpinner();
-    } else {
-        resetSpinner();
     }
 }
 
-function resetSpinner() {
-    window._timeIdx = -1;
-    const disp = document.getElementById('time-spinner-display');
-    const wrap = document.getElementById('time-spinner-wrap');
-    const btnP = document.getElementById('btn-time-prev');
-    const btnN = document.getElementById('btn-time-next');
-    if (disp) { disp.textContent = 'Pilih jam'; disp.className = 'time-spinner-display placeholder'; }
-    if (wrap) wrap.classList.remove('has-value');
-    if (btnP) btnP.disabled = true;
-    if (btnN) btnN.disabled = !(window._timeSlots && window._timeSlots.length > 0);
+function toggleTimeDropdown() {
+    const btn  = document.getElementById('time-dropdown-btn');
+    const list = document.getElementById('time-dropdown-list');
+    const isOpen = list.classList.contains('open');
+    if (isOpen) { list.classList.remove('open'); btn.classList.remove('open'); }
+    else         { buildPickupTimeGrid(); list.classList.add('open'); btn.classList.add('open'); }
 }
-
-function renderSpinner() {
-    const slots = window._timeSlots || [];
-    const idx   = window._timeIdx;
-    const disp  = document.getElementById('time-spinner-display');
-    const wrap  = document.getElementById('time-spinner-wrap');
-    const prev  = document.getElementById('btn-time-prev');
-    const next  = document.getElementById('btn-time-next');
-    if (idx < 0 || slots.length === 0) { resetSpinner(); return; }
-    if (disp) { disp.textContent = slots[idx]; disp.className = 'time-spinner-display'; }
-    if (wrap) wrap.classList.add('has-value');
-    if (prev) prev.disabled = (idx <= 0);
-    if (next) next.disabled = (idx >= slots.length - 1);
-    pickupTime = slots[idx];
-    validateSendButton();
-}
-
-function spinTime(delta) {
-    const slots = window._timeSlots || [];
-    if (slots.length === 0) return;
-    let idx = (window._timeIdx === undefined || window._timeIdx < 0) ? 0 : window._timeIdx + delta;
-    if (idx < 0) idx = 0;
-    if (idx >= slots.length) idx = slots.length - 1;
-    window._timeIdx = idx;
-    renderSpinner();
-}
-
-function toggleTimeDropdown() { /* tidak dipakai, spinner menggantikan */ }
 
 function selectPickupTime(time) {
-    const slots = window._timeSlots || [];
-    const idx = slots.indexOf(time);
-    if (idx >= 0) { window._timeIdx = idx; renderSpinner(); }
+    pickupTime = time;
+    // Update label
+    document.getElementById('time-dropdown-label').textContent = '🕐 ' + time;
+    const btn = document.getElementById('time-dropdown-btn');
+    btn.classList.add('selected'); btn.classList.remove('open');
+    document.getElementById('time-dropdown-list').classList.remove('open');
+    // Highlight item
+    document.querySelectorAll('.tdl-item').forEach(el => el.classList.remove('selected'));
+    document.getElementById('ptime-' + time.replace('.','_'))?.classList.add('selected');
+    validateSendButton();
 }
 
 function selectOrderType(type) {
     orderType = type;
     document.getElementById('ot-pickup').classList.toggle('selected', type==='pickup');
     document.getElementById('pickup-time-wrap').style.display = type==='pickup' ? 'block' : 'none';
-    if (type==='pickup') { buildPickupTimeGrid(); }
-    else { pickupTime = null; }
+    if (type==='pickup') buildPickupTimeGrid();
     validateSendButton();
 }
 
@@ -1582,10 +1607,13 @@ function resetApp() {
     document.getElementById('ot-pickup').classList.remove('selected');
     document.getElementById('pickup-time-wrap').style.display = 'none';
     // Reset dropdown
-    window._timeIdx = -1;
-    window._timeSlots = [];
-    pickupTime = null;
-    resetSpinner();
+    const tdbLabel = document.getElementById('time-dropdown-label');
+    if (tdbLabel) tdbLabel.textContent = 'Pilih jam pengambilan…';
+    const tdbBtn = document.getElementById('time-dropdown-btn');
+    if (tdbBtn) { tdbBtn.classList.remove('selected','open'); }
+    const tdbList = document.getElementById('time-dropdown-list');
+    if (tdbList) { tdbList.classList.remove('open'); tdbList.innerHTML = ''; }
+    document.querySelectorAll('.time-chip').forEach(el => el.classList.remove('selected'));
     // Tampilkan banner status jika masih ada pesanan aktif
     if (activeOrderCode) {
         document.getElementById('status-banner-wrap').style.display = 'block';
@@ -1612,9 +1640,24 @@ const _isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const _isInApp = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 
 // Register service worker
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw-order.js').catch(() => {});
+        navigator.serviceWorker.register('./sw-order.js').then(reg => {
+            reg.update();
+            reg.addEventListener('updatefound', () => {
+                const newSW = reg.installing;
+                newSW.addEventListener('statechange', () => {
+                    if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                        newSW.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                });
+            });
+        }).catch(() => {});
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) { refreshing = true; window.location.reload(); }
+        });
     });
 }
 
@@ -1705,7 +1748,7 @@ function initChatFab() {
     chatOrderCode    = code;
     chatCustomerName = name;
     document.getElementById('chat-order-label').textContent = 'Pesanan #' + code;
-    document.getElementById('chat-fab').classList.add('show');
+    document.getElementById('header-chat-btn').style.display = 'flex';
     subscribeChatCustomer(code);
 }
 
@@ -1716,7 +1759,7 @@ function activateChatFab(orderCode, customerName) {
     localStorage.setItem('activeOrderCode', orderCode);
     localStorage.setItem('activeOrderName', chatCustomerName);
     document.getElementById('chat-order-label').textContent = 'Pesanan #' + orderCode;
-    document.getElementById('chat-fab').classList.add('show');
+    document.getElementById('header-chat-btn').style.display = 'flex';
     subscribeChatCustomer(orderCode);
 }
 
@@ -1826,9 +1869,9 @@ function subscribeChatCustomer(orderCode) {
         .subscribe();
 }
 
-// ── Update badge FAB ──────────────────────────────────────
+// ── Update badge chat di header ────────────────────────────
 function updateChatFabBadge() {
-    const badge = document.getElementById('chat-fab-badge');
+    const badge = document.getElementById('hchat-badge');
     if (!badge) return;
     badge.textContent = chatUnreadCust > 9 ? '9+' : chatUnreadCust;
     chatUnreadCust > 0 ? badge.classList.add('show') : badge.classList.remove('show');

@@ -432,6 +432,66 @@
         body.store-closed .prod-card { opacity: .45; pointer-events: none; filter: grayscale(0.4); }
         body.store-closed #header-cart-btn { opacity: .4; pointer-events: none; }
         body.store-closed .float-bar { display: none !important; }
+
+        /* ── CHAT BUBBLE (konsumen) ── */
+        #chat-fab {
+            position: fixed; bottom: 88px; right: 16px; z-index: 500;
+            width: 52px; height: 52px; border-radius: 16px;
+            background: linear-gradient(135deg, #16A34A, #22c55e);
+            border: none; color: white; font-size: 22px;
+            box-shadow: 0 4px 16px rgba(22,163,74,0.45);
+            cursor: pointer; display: none; align-items: center; justify-content: center;
+            transition: transform .15s;
+        }
+        #chat-fab.show { display: flex; animation: popIn .4s cubic-bezier(.34,1.56,.64,1); }
+        #chat-fab:active { transform: scale(0.9); }
+        .chat-fab-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: var(--danger); color: white;
+            font-size: 9px; font-weight: 900; min-width: 18px; height: 18px;
+            padding: 0 4px; border-radius: 9px;
+            display: none; align-items: center; justify-content: center;
+            box-shadow: 0 1px 4px rgba(239,68,68,0.5);
+        }
+        .chat-fab-badge.show { display: flex; }
+
+        /* Chat panel modal */
+        #chat-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9000; display: none; align-items: flex-end; backdrop-filter: blur(3px); }
+        #chat-modal.open { display: flex; }
+        .chat-sheet {
+            background: white; border-radius: 24px 24px 0 0;
+            width: 100%; height: 72dvh; display: flex; flex-direction: column;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+            animation: slideUp .28s cubic-bezier(.32,1.2,.68,1);
+        }
+        .chat-sheet-header {
+            background: linear-gradient(135deg, #16A34A 0%, #22c55e 100%);
+            padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+            border-radius: 24px 24px 0 0; flex-shrink: 0;
+        }
+        .csh-avatar { width: 38px; height: 38px; border-radius: 12px; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .csh-info { flex: 1; }
+        .csh-info strong { display: block; font-size: 13px; font-weight: 800; color: white; }
+        .csh-info span { font-size: 11px; color: rgba(255,255,255,0.8); font-weight: 600; }
+        .csh-close { background: rgba(255,255,255,0.2); border: none; border-radius: 10px; width: 34px; height: 34px; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .chat-msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #F5F7FA; -webkit-overflow-scrolling: touch; }
+        .c-msg { max-width: 80%; display: flex; flex-direction: column; gap: 3px; }
+        .c-msg.mine  { align-self: flex-end; }
+        .c-msg.theirs { align-self: flex-start; }
+        .c-bubble { padding: 9px 13px; border-radius: 18px; font-size: 13px; font-weight: 600; line-height: 1.4; word-break: break-word; }
+        .c-msg.mine   .c-bubble { background: #16A34A; color: white; border-radius: 18px 18px 4px 18px; }
+        .c-msg.theirs .c-bubble { background: white; color: #1A1A2E; border-radius: 4px 18px 18px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .c-time { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+        .c-msg.mine .c-time { text-align: right; }
+        .chat-input-wrap { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: white; border-top: 1px solid var(--border); flex-shrink: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+        .chat-input-wrap input { flex: 1; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-family: inherit; outline: none; background: #f8fafc; text-transform: none; color: #1A1A2E; }
+        .chat-input-wrap input:focus { border-color: #16A34A; }
+        .chat-send { width: 40px; height: 40px; background: #16A34A; border: none; border-radius: 12px; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 3px 10px rgba(22,163,74,0.35); transition: .15s; }
+        .chat-send:active { transform: scale(0.9); }
+        .chat-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+        .chat-empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted); }
+        .chat-empty-state i { font-size: 36px; color: var(--border); }
+        .chat-empty-state p { font-size: 13px; font-weight: 600; text-align: center; }
     </style>
 </head>
 <body>
@@ -498,6 +558,34 @@
             <i class="fa-brands fa-whatsapp"></i> Bagikan ke Teman via WhatsApp
         </button>
         <button class="btn-order-again" onclick="resetApp()">+ Pesan Lagi</button>
+    </div>
+</div>
+
+<!-- ── CHAT FAB (muncul setelah pesanan dibuat) ── -->
+<button id="chat-fab" onclick="openChatModal()">
+    <i class="fa-solid fa-comment-dots"></i>
+    <span class="chat-fab-badge" id="chat-fab-badge"></span>
+</button>
+
+<!-- ── CHAT MODAL (konsumen) ── -->
+<div id="chat-modal" onclick="if(event.target===this)closeChatModal()">
+    <div class="chat-sheet">
+        <div class="chat-sheet-header">
+            <div class="csh-avatar">🧃</div>
+            <div class="csh-info">
+                <strong>Chat dengan Kasir</strong>
+                <span id="chat-order-label">Menghubungkan…</span>
+            </div>
+            <button class="csh-close" onclick="closeChatModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="chat-msgs" id="chat-msgs-container"></div>
+        <div class="chat-input-wrap">
+            <input type="text" id="chat-input-order" placeholder="Ketik pesan…"
+                onkeydown="if(event.key==='Enter')sendChatFromCustomer()">
+            <button class="chat-send" id="chat-send-btn" onclick="sendChatFromCustomer()">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -1266,6 +1354,7 @@ async function confirmPayment() {
         document.getElementById('success-type-info').textContent = `🏪 Diambil ke Toko — Jam ${pickupTime}`;
         closePaymentModal();
         document.getElementById('success-screen').classList.add('show');
+        activateChatFab(code, pendingOrderData.nama);
         cart = {};
         renderCartModal();
         renderGrid();
@@ -1607,6 +1696,158 @@ function pwaTriggerInstall() {
 function pwaDismiss() {
     document.getElementById('pwa-banner').classList.remove('show');
 }
+
+// ╔══════════════════════════════════════════════════════════╗
+//   FITUR CHAT — KONSUMEN
+// ╚══════════════════════════════════════════════════════════╝
+let chatOrderCode    = null;   // kode order aktif
+let chatCustomerName = null;   // nama konsumen (dari localStorage)
+let chatChannelCust  = null;   // realtime channel
+let chatUnreadCust   = 0;      // pesan belum dibaca dari kasir
+
+// ── Inisialisasi: tampilkan FAB jika ada order aktif ─────
+function initChatFab() {
+    const code = localStorage.getItem('activeOrderCode');
+    const name = localStorage.getItem('activeOrderName') || 'Konsumen';
+    if (!code) return;
+    chatOrderCode    = code;
+    chatCustomerName = name;
+    document.getElementById('chat-order-label').textContent = 'Pesanan #' + code;
+    document.getElementById('chat-fab').classList.add('show');
+    subscribeChatCustomer(code);
+}
+
+// ── Panggil saat order berhasil dikirim ─────────────────
+function activateChatFab(orderCode, customerName) {
+    chatOrderCode    = orderCode;
+    chatCustomerName = customerName || 'Konsumen';
+    localStorage.setItem('activeOrderCode', orderCode);
+    localStorage.setItem('activeOrderName', chatCustomerName);
+    document.getElementById('chat-order-label').textContent = 'Pesanan #' + orderCode;
+    document.getElementById('chat-fab').classList.add('show');
+    subscribeChatCustomer(orderCode);
+}
+
+// ── Buka modal chat ──────────────────────────────────────
+async function openChatModal() {
+    if (!chatOrderCode) return;
+    chatUnreadCust = 0;
+    updateChatFabBadge();
+    document.getElementById('chat-msgs-container').innerHTML =
+        '<div class="chat-empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat pesan…</p></div>';
+    document.getElementById('chat-modal').classList.add('open');
+    document.getElementById('chat-input-order').value = '';
+    await loadChatMsgsCust(chatOrderCode);
+    document.getElementById('chat-input-order').focus();
+}
+
+// ── Tutup modal chat ─────────────────────────────────────
+function closeChatModal() {
+    document.getElementById('chat-modal').classList.remove('open');
+}
+
+// ── Load pesan ────────────────────────────────────────────
+async function loadChatMsgsCust(orderCode) {
+    try {
+        const { data, error } = await supa
+            .from('chat_messages')
+            .select('*')
+            .eq('order_code', orderCode)
+            .order('created_at', { ascending: true });
+        if (error) throw error;
+        renderChatMsgsCust(data || []);
+    } catch(e) {
+        document.getElementById('chat-msgs-container').innerHTML =
+            '<div class="chat-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Gagal memuat pesan</p></div>';
+    }
+}
+
+// ── Render pesan ke UI ────────────────────────────────────
+function renderChatMsgsCust(msgs) {
+    const el = document.getElementById('chat-msgs-container');
+    if (!msgs.length) {
+        el.innerHTML = '<div class="chat-empty-state"><i class="fa-solid fa-comments"></i><p>Belum ada pesan.<br>Tanyakan ke kasir kami!</p></div>';
+        return;
+    }
+    el.innerHTML = msgs.map(m => {
+        const isMe  = m.sender === 'customer';
+        const waktu = new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        return `<div class="c-msg ${isMe ? 'mine' : 'theirs'}">
+            <div class="c-bubble">${escapeHtmlCust(m.message)}</div>
+            <div class="c-time">${isMe ? '' : 'Kasir · '}${waktu}</div>
+        </div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+}
+
+// ── Kirim pesan dari konsumen ─────────────────────────────
+async function sendChatFromCustomer() {
+    if (!chatOrderCode) return;
+    const input = document.getElementById('chat-input-order');
+    const msg   = input.value.trim();
+    if (!msg) return;
+    const btn = document.getElementById('chat-send-btn');
+    btn.disabled = true;
+    input.value  = '';
+    try {
+        const { error } = await supa.from('chat_messages').insert({
+            order_code: chatOrderCode,
+            sender:     'customer',
+            message:    msg
+        });
+        if (error) throw error;
+    } catch(e) {
+        showToast('❌ Gagal kirim: ' + e.message);
+        input.value = msg;
+    } finally {
+        btn.disabled = false;
+        input.focus();
+    }
+}
+
+// ── Subscribe realtime chat (sisi konsumen) ───────────────
+function subscribeChatCustomer(orderCode) {
+    if (chatChannelCust) supa.removeChannel(chatChannelCust);
+    chatChannelCust = supa
+        .channel('chat-cust-' + orderCode)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'chat_messages',
+            filter: `order_code=eq.${orderCode}`
+        }, async (payload) => {
+            const modal = document.getElementById('chat-modal');
+            // Hanya muat ulang jika pesan dari kasir
+            if (payload.new.sender === 'cashier') {
+                if (modal.classList.contains('open')) {
+                    await loadChatMsgsCust(orderCode);
+                } else {
+                    chatUnreadCust++;
+                    updateChatFabBadge();
+                    showToast('💬 Kasir membalas pesanmu!');
+                }
+            } else if (payload.new.sender === 'customer') {
+                // Pesan dari diri sendiri, refresh jika modal terbuka
+                if (modal.classList.contains('open')) {
+                    await loadChatMsgsCust(orderCode);
+                }
+            }
+        })
+        .subscribe();
+}
+
+// ── Update badge FAB ──────────────────────────────────────
+function updateChatFabBadge() {
+    const badge = document.getElementById('chat-fab-badge');
+    if (!badge) return;
+    badge.textContent = chatUnreadCust > 9 ? '9+' : chatUnreadCust;
+    chatUnreadCust > 0 ? badge.classList.add('show') : badge.classList.remove('show');
+}
+
+function escapeHtmlCust(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Inisialisasi chat saat halaman dimuat
+initChatFab();
 </script>
 <!-- PWA Install Banner -->
 <div id="pwa-banner">

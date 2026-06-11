@@ -631,7 +631,7 @@
     <div class="header-text">
         <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
-        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.2.4</p>
+        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.2.5</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
         <i class="fa-solid fa-basket-shopping"></i>
@@ -1379,7 +1379,10 @@ function previewProof(event) {
     document.getElementById('btn-confirm-pay').style.opacity = '1';
 }
 
+let _confirmInProgress = false;
 async function confirmPayment() {
+    if (_confirmInProgress) return;
+    _confirmInProgress = true;
     const btn = document.getElementById('btn-confirm-pay');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses…';
@@ -1427,9 +1430,13 @@ async function confirmPayment() {
         renderGrid();
         startStatusPoll();
     } catch(e) {
-        toast('❌ Gagal: ' + e.message);
+        const msg = e?.message || e?.error_description || JSON.stringify(e) || 'Unknown error';
+        toast('❌ Gagal: ' + msg);
+        console.error('[confirmPayment] error:', e);
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim Pesanan';
+    } finally {
+        _confirmInProgress = false;
     }
 }
 

@@ -1678,6 +1678,84 @@ function resetApp() {
 initApp();
 if (activeOrderCode) startStatusPoll();
 
+// ╔══════════════════════════════════════════════════════════╗
+//   BACK BUTTON HANDLER (Android Hardware Back)
+// ╚══════════════════════════════════════════════════════════╝
+(function() {
+    history.pushState({ app: true }, '');
+
+    window.addEventListener('popstate', function() {
+        // Urutan prioritas tutup: chat → payment → status → cart → qty → tidak keluar
+        const chatModal    = document.getElementById('chat-modal');
+        const paymentModal = document.getElementById('payment-modal');
+        const statusModal  = document.getElementById('status-modal');
+        const cartModal    = document.getElementById('cart-modal');
+        const qtyModal     = document.getElementById('qty-modal');
+
+        if (chatModal && chatModal.classList.contains('open')) {
+            closeChatModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (paymentModal && paymentModal.classList.contains('open')) {
+            closePaymentModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (statusModal && statusModal.classList.contains('open')) {
+            closeStatusModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (cartModal && cartModal.classList.contains('open')) {
+            closeCartModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (qtyModal && qtyModal.classList.contains('open')) {
+            closeQtyModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        // Tidak ada yang terbuka → push state lagi agar tidak keluar dari app
+        history.pushState({ app: true }, '');
+    });
+})();
+
+// ╔══════════════════════════════════════════════════════════╗
+//   BLOKIR KEYBOARD SEARCH & SHORTCUT BROWSER
+// ╚══════════════════════════════════════════════════════════╝
+(function() {
+    const BLOCKED_COMBOS = [
+        e => e.ctrlKey && (e.key === 'k' || e.key === 'K'),
+        e => e.ctrlKey && (e.key === 'l' || e.key === 'L'),
+        e => e.ctrlKey && (e.key === 'f' || e.key === 'F'),
+        e => e.ctrlKey && (e.key === 'g' || e.key === 'G'),
+        e => e.key === 'F3',
+        e => e.key === 'F5',
+        e => e.ctrlKey && (e.key === 'r' || e.key === 'R'),
+    ];
+
+    document.addEventListener('keydown', function(e) {
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        for (const combo of BLOCKED_COMBOS) {
+            if (combo(e)) { e.preventDefault(); e.stopPropagation(); return; }
+        }
+
+        // Blokir huruf/angka tunggal agar tidak trigger Google Quick Search
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true); // capture phase
+
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+})();
+
 // ── DISABLE PULL-TO-REFRESH ──────────────────────────────────
 let _touchStartY = 0;
 document.addEventListener('touchstart', e => { _touchStartY = e.touches[0].clientY; }, { passive: true });

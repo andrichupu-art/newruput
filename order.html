@@ -1981,39 +1981,56 @@ async function sendChatFromCustomer() {
     }
 }
 
-// ── Bunyi notifikasi pesan masuk (Web Audio API) ──────────
+// ── Unlock audio sekali saat user pertama tap ────────────
+let audioUnlocked = false;
+let sharedAudioCtx = null;
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+    try {
+        sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Mainkan suara senyap untuk unlock
+        const buf = sharedAudioCtx.createBuffer(1, 1, 22050);
+        const src = sharedAudioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(sharedAudioCtx.destination);
+        src.start(0);
+        audioUnlocked = true;
+    } catch(e) {}
+}
+
+// Unlock saat tap pertama di mana saja
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
+
+// ── Bunyi notifikasi KERAS (Web Audio API) ────────────────
 function playChatSound() {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = sharedAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(1.5, ctx.currentTime);
+        master.connect(ctx.destination);
         const now = ctx.currentTime;
-
-        // Nada 1: ting tinggi
-        const o1 = ctx.createOscillator();
-        const g1 = ctx.createGain();
-        o1.connect(g1); g1.connect(ctx.destination);
-        o1.type = 'sine';
-        o1.frequency.setValueAtTime(880, now);
-        o1.frequency.exponentialRampToValueAtTime(1100, now + 0.08);
-        g1.gain.setValueAtTime(0.4, now);
-        g1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        o1.start(now); o1.stop(now + 0.3);
-
-        // Nada 2: ting lebih tinggi (selisih 0.12 detik)
-        const o2 = ctx.createOscillator();
-        const g2 = ctx.createGain();
-        o2.connect(g2); g2.connect(ctx.destination);
-        o2.type = 'sine';
-        o2.frequency.setValueAtTime(1320, now + 0.12);
-        o2.frequency.exponentialRampToValueAtTime(1600, now + 0.2);
-        g2.gain.setValueAtTime(0.35, now + 0.12);
-        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        o2.start(now + 0.12); o2.stop(now + 0.45);
-
-        // Tutup AudioContext setelah selesai
-        setTimeout(() => ctx.close(), 600);
-    } catch(e) {
-        // Browser tidak support Web Audio, abaikan
-    }
+        function beep(freq, start, dur, type) {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = type || 'square';
+            o.frequency.setValueAtTime(freq, now + start);
+            g.gain.setValueAtTime(1.0, now + start);
+            g.gain.setValueAtTime(1.0, now + start + dur - 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+            o.connect(g); g.connect(master);
+            o.start(now + start);
+            o.stop(now + start + dur);
+        }
+        beep(880,  0.00, 0.18, 'square');
+        beep(880,  0.00, 0.18, 'sawtooth');
+        beep(1100, 0.22, 0.18, 'square');
+        beep(1100, 0.22, 0.18, 'sawtooth');
+        beep(1320, 0.44, 0.25, 'square');
+        beep(1320, 0.44, 0.25, 'sawtooth');
+    } catch(e) {}
 }
 
 // ── Vibrate HP saat pesan masuk ───────────────────────────

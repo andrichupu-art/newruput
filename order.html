@@ -275,6 +275,27 @@
         .stepper-btn { border: none; background: none; color: var(--primary-dark); width: 52px; height: 52px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .stepper-btn:active { background: #dcfce7; }
         .stepper-val { font-size: 22px; font-weight: 900; color: var(--text-main); width: 52px; text-align: center; }
+
+        /* ── TIME STEPPER ── */
+        .time-stepper-wrap {
+            display: flex; align-items: center; gap: 0;
+            background: #f0fdf4; border-radius: 16px; overflow: hidden;
+            border: 2px solid var(--primary);
+        }
+        .time-step-btn {
+            border: none; background: none; color: var(--primary-dark);
+            width: 56px; height: 52px; font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .15s; flex-shrink: 0;
+        }
+        .time-step-btn:active { background: #dcfce7; }
+        .time-step-btn:disabled { opacity: .3; cursor: not-allowed; }
+        .time-step-val {
+            flex: 1; text-align: center;
+            font-size: 18px; font-weight: 900; color: var(--primary-dark);
+            padding: 0 8px;
+        }
+        .time-step-val.placeholder { font-size: 13px; font-weight: 600; color: var(--text-muted); }
         .btn-add-to-cart {
             background: linear-gradient(135deg, #16A34A 0%, #22c55e 100%);
             color: white; border: none; border-radius: 16px;
@@ -610,7 +631,7 @@
     <div class="header-text">
         <h1>NEWRUPUT JUICE</h1>
         <p>Pesan langsung dari HP kamu</p>
-        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.2.3</p>
+        <p style="font-size:9px;color:rgba(255,255,255,0.5);font-weight:400;margin-top:1px;">v1.2.4</p>
     </div>
     <button class="header-cart-btn" onclick="openCartModal()" id="header-cart-btn">
         <i class="fa-solid fa-basket-shopping"></i>
@@ -719,18 +740,16 @@
                 </div>
                 <div id="pickup-time-wrap" style="display:none;">
                     <label>Jam Pengambilan</label>
-                <div id="pickup-time-grid" style="display:none;"></div>
-                    <div class="time-dropdown-wrap" id="time-dropdown-wrap">
-                        <button class="time-dropdown-btn" id="time-dropdown-btn" onclick="toggleTimeDropdown()">
-                            <span class="tdb-left">
-                                <span>🕐</span>
-                                <span id="time-dropdown-label">Pilih jam pengambilan…</span>
-                            </span>
-                            <span class="tdb-arrow">▼</span>
+                    <div class="time-stepper-wrap" id="time-stepper-wrap">
+                        <button class="time-step-btn" onclick="stepPickupTime(-1)" id="time-step-prev">
+                            <i class="fa-solid fa-chevron-left"></i>
                         </button>
-                        <div class="time-dropdown-list" id="time-dropdown-list"></div>
+                        <div class="time-step-val" id="time-step-label">Pilih jam</div>
+                        <button class="time-step-btn" onclick="stepPickupTime(1)" id="time-step-next">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
                     </div>
-                    <p id="pickup-time-hint" style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;">⏰ Toko buka pukul 10.00 – 20.00</p>
+                    <p id="pickup-time-hint" style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;text-align:center;">⏰ Toko buka pukul 10.00 – 20.00</p>
                 </div>
                 <div id="table-input-wrap" style="display:none;"></div>
             </div>
@@ -1218,32 +1237,61 @@ function buildPickupTimeGrid() {
     }
 }
 
-function toggleTimeDropdown() {
-    const btn  = document.getElementById('time-dropdown-btn');
-    const list = document.getElementById('time-dropdown-list');
-    const isOpen = list.classList.contains('open');
-    if (isOpen) { list.classList.remove('open'); btn.classList.remove('open'); }
-    else         { buildPickupTimeGrid(); list.classList.add('open'); btn.classList.add('open'); }
+// ── TIME STEPPER ────────────────────────────────────────
+let _timeSlots  = [];   // semua slot valid hari ini
+let _timeIdx    = -1;   // index slot yang dipilih (-1 = belum pilih)
+
+function buildTimeSlots() {
+    const now = new Date();
+    const wibNow = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
+    const nowMinutes = wibNow.getHours() * 60 + wibNow.getMinutes();
+    const toMin = t => { const [h,m] = t.split('.').map(Number); return h*60+m; };
+    const all = [];
+    for (let h = 10; h <= 20; h++) {
+        all.push(String(h).padStart(2,'0') + '.00');
+        if (h < 20) all.push(String(h).padStart(2,'0') + '.30');
+    }
+    _timeSlots = all.filter(t => toMin(t) > nowMinutes);
 }
 
-function selectPickupTime(time) {
-    pickupTime = time;
-    // Update label
-    document.getElementById('time-dropdown-label').textContent = '🕐 ' + time;
-    const btn = document.getElementById('time-dropdown-btn');
-    btn.classList.add('selected'); btn.classList.remove('open');
-    document.getElementById('time-dropdown-list').classList.remove('open');
-    // Highlight item
-    document.querySelectorAll('.tdl-item').forEach(el => el.classList.remove('selected'));
-    document.getElementById('ptime-' + time.replace('.','_'))?.classList.add('selected');
+function initTimeStepper() {
+    buildTimeSlots();
+    _timeIdx = -1;
+    pickupTime = null;
+    const label = document.getElementById('time-step-label');
+    label.textContent = _timeSlots.length ? 'Pilih jam' : 'Toko tutup';
+    label.className = 'time-step-val placeholder';
+    updateStepperBtns();
+}
+
+function stepPickupTime(dir) {
+    if (_timeSlots.length === 0) return;
+    if (_timeIdx === -1) {
+        _timeIdx = dir > 0 ? 0 : _timeSlots.length - 1;
+    } else {
+        _timeIdx = Math.max(0, Math.min(_timeSlots.length - 1, _timeIdx + dir));
+    }
+    pickupTime = _timeSlots[_timeIdx];
+    const label = document.getElementById('time-step-label');
+    label.textContent = '🕐 ' + pickupTime;
+    label.className = 'time-step-val';
+    updateStepperBtns();
     validateSendButton();
+}
+
+function updateStepperBtns() {
+    const prev = document.getElementById('time-step-prev');
+    const next = document.getElementById('time-step-next');
+    if (!prev || !next) return;
+    prev.disabled = _timeSlots.length === 0 || _timeIdx <= 0;
+    next.disabled = _timeSlots.length === 0 || _timeIdx >= _timeSlots.length - 1;
 }
 
 function selectOrderType(type) {
     orderType = type;
     document.getElementById('ot-pickup').classList.toggle('selected', type==='pickup');
     document.getElementById('pickup-time-wrap').style.display = type==='pickup' ? 'block' : 'none';
-    if (type==='pickup') buildPickupTimeGrid();
+    if (type==='pickup') initTimeStepper();
     validateSendButton();
 }
 

@@ -645,7 +645,15 @@
             <div class="cart-card" style="padding:16px;">
                 <label style="font-size:12px;font-weight:800;color:var(--text-main);margin-bottom:-6px;">Filter Tanggal</label>
                 <div class="filter-row">
-                    <input type="date" id="filter-riwayat" onchange="updateRiwayatUI()" style="text-transform:none;">
+                    <div style="flex:1;position:relative;">
+                        <div id="filter-riwayat-display" onclick="toggleDatePicker('riwayat')"
+                            style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;background:white;display:flex;align-items:center;gap:8px;">
+                            <i class="fa-solid fa-calendar-day" style="color:var(--primary);"></i>
+                            <span id="filter-riwayat-label">Hari ini</span>
+                        </div>
+                        <input type="date" id="filter-riwayat" style="position:absolute;opacity:0;pointer-events:none;top:0;left:0;width:1px;height:1px;"
+                            onchange="onDatePicked('riwayat')">
+                    </div>
                     <button class="btn-reset" onclick="resetFilterRiwayat()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
                 </div>
             </div>
@@ -680,7 +688,15 @@
             <div class="cart-card" style="padding:16px;">
                 <label style="font-size:12px;font-weight:800;color:var(--text-main);margin-bottom:-6px;">Filter Tanggal</label>
                 <div class="filter-row">
-                    <input type="date" id="filter-laporan" onchange="updateLaporanUI()" style="text-transform:none;">
+                    <div style="flex:1;position:relative;">
+                        <div id="filter-laporan-display" onclick="toggleDatePicker('laporan')"
+                            style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;background:white;display:flex;align-items:center;gap:8px;">
+                            <i class="fa-solid fa-calendar-day" style="color:var(--primary);"></i>
+                            <span id="filter-laporan-label">Hari ini</span>
+                        </div>
+                        <input type="date" id="filter-laporan" style="position:absolute;opacity:0;pointer-events:none;top:0;left:0;width:1px;height:1px;"
+                            onchange="onDatePicked('laporan')">
+                    </div>
                     <button class="btn-reset" onclick="resetFilterLaporan()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
                 </div>
             </div>
@@ -982,13 +998,18 @@ function subscribeProducts() {
 async function loadTransactions() {
     const { data, error } = await supa
         .from('transactions')
-        .select('id, date, total, transaction_items(product_name, qty, price, subtotal)')
+        .select('id, date, created_at, total, transaction_items(product_name, qty, price, subtotal)')
         .order('created_at', { ascending: false });
     if (error) throw error;
-    transactionHistory = (data || []).map(tx => ({
-        id: tx.id, date: tx.date, total: tx.total,
-        items: tx.transaction_items || []
-    }));
+    transactionHistory = (data || []).map(tx => {
+        let d = tx.date ? tx.date.substring(0, 10) : '';
+        // Fallback ke created_at jika date kosong/null
+        if (!d && tx.created_at) {
+            const wib = new Date(new Date(tx.created_at).getTime() + 7 * 3600000);
+            d = wib.toISOString().substring(0, 10);
+        }
+        return { id: tx.id, date: d, total: tx.total, items: tx.transaction_items || [] };
+    });
 }
 
 async function loadHppShared() {
@@ -1266,8 +1287,24 @@ function switchTab(t) {
     const stickyHeader = document.getElementById('menu-sticky-header');
     // Sticky header hanya muncul di tab menu, dan TIDAK di full mode
     if (stickyHeader) stickyHeader.style.display = (t === 'menu' && !isFullMode) ? 'flex' : 'none';
-    if (t === 'riwayat') updateRiwayatUI();
-    if (t === 'laporan') updateLaporanUI();
+    if (t === 'riwayat') {
+        const fd = document.getElementById('filter-riwayat');
+        if (!fd.value) {
+            fd.value = getFormattedDate(new Date());
+            const [y,m,d] = fd.value.split('-');
+            document.getElementById('filter-riwayat-label').textContent = d+' / '+m+' / '+y;
+        }
+        updateRiwayatUI();
+    }
+    if (t === 'laporan') {
+        const fl = document.getElementById('filter-laporan');
+        if (!fl.value) {
+            fl.value = getFormattedDate(new Date());
+            const [y,m,d] = fl.value.split('-');
+            document.getElementById('filter-laporan-label').textContent = d+' / '+m+' / '+y;
+        }
+        updateLaporanUI();
+    }
     if (t === 'hpp')     { hppRenderAll(); hppSetCat(activeHppCat); }
     if (t === 'member')  memberLoad();
 }
@@ -1275,7 +1312,36 @@ function switchTab(t) {
 // ╔══════════════════════════════════════════════════════════╗
 //   RIWAYAT
 // ╚══════════════════════════════════════════════════════════╝
-function resetFilterRiwayat() { document.getElementById('filter-riwayat').value=''; updateRiwayatUI(); }
+function toggleDatePicker(id) {
+    const inp = document.getElementById('filter-' + id);
+    inp.style.pointerEvents = 'auto';
+    inp.focus();
+    inp.showPicker && inp.showPicker();
+    inp.addEventListener('blur', () => { inp.style.pointerEvents = 'none'; }, { once: true });
+}
+function onDatePicked(id) {
+    const inp = document.getElementById('filter-' + id);
+    inp.style.pointerEvents = 'none';
+    inp.blur();
+    const val = inp.value;
+    const lbl = document.getElementById('filter-' + id + '-label');
+    if (val) {
+        const [y, m, d] = val.split('-');
+        lbl.textContent = d + ' / ' + m + ' / ' + y;
+    }
+    if (id === 'riwayat') updateRiwayatUI();
+    else updateLaporanUI();
+}
+function resetFilterRiwayat() {
+    document.getElementById('filter-riwayat').value = '';
+    document.getElementById('filter-riwayat-label').textContent = 'Semua tanggal';
+    updateRiwayatUI();
+}
+function resetFilterLaporan() {
+    document.getElementById('filter-laporan').value = '';
+    document.getElementById('filter-laporan-label').textContent = 'Semua tanggal';
+    updateLaporanUI();
+}
 function updateRiwayatUI() {
     const fd  = document.getElementById('filter-riwayat').value;
     const txs = fd ? transactionHistory.filter(t => t.date === fd) : transactionHistory;
@@ -1303,7 +1369,6 @@ function updateRiwayatUI() {
 // ╔══════════════════════════════════════════════════════════╗
 //   LAPORAN & CHART
 // ╚══════════════════════════════════════════════════════════╝
-function resetFilterLaporan() { document.getElementById('filter-laporan').value=''; updateLaporanUI(); }
 function updateLaporanUI() {
     const fd  = document.getElementById('filter-laporan').value;
     const txs = fd ? transactionHistory.filter(t => t.date === fd) : transactionHistory;
@@ -1358,8 +1423,15 @@ async function selesaikanTransaksi() {
     const bayar = parseInt(document.getElementById('input-bayar').value.replace(/[^0-9]/g,'')||0);
     if (bayar < globalTotalTagihan) { alert('Uang pembayaran kurang!'); return; }
 
+    // ── Cek koneksi sebelum proses ──────────────────────────
+    if (!navigator.onLine) {
+        alert('⚠️ Tidak ada koneksi internet!\nTransaksi tidak disimpan. Pastikan terhubung ke internet lalu coba lagi.');
+        return;
+    }
+
     const btn = document.getElementById('btn-bayar'); btn.disabled = true;
     setLoader('Menyimpan transaksi ke Supabase…');
+    let txRow = null;
     try {
         const items = [];
         for (const id in cartQty) {
@@ -1369,22 +1441,32 @@ async function selesaikanTransaksi() {
         const dateStr = getFormattedDate(new Date());
 
         // Insert header transaksi
-        const { data:txRow, error:txErr } = await supa.from('transactions')
+        const { data:txData, error:txErr } = await supa.from('transactions')
             .insert({ date:dateStr, total:globalTotalTagihan }).select().single();
-        if (txErr) throw txErr;
+        if (txErr) throw new Error('Gagal simpan transaksi: ' + txErr.message);
+        txRow = txData;
 
         // Insert item transaksi
         const { error:itemErr } = await supa.from('transaction_items')
             .insert(items.map(i => ({ ...i, transaction_id:txRow.id })));
-        if (itemErr) throw itemErr;
+        if (itemErr) {
+            // Rollback: hapus header transaksi yang sudah tersimpan
+            await supa.from('transactions').delete().eq('id', txRow.id);
+            throw new Error('Gagal simpan item transaksi: ' + itemErr.message);
+        }
 
         // Update stok di Supabase
         for (const id in cartQty) {
             const p = products.find(x => x.id == id); if (!p) continue;
-            const ns = p.stock - cartQty[id];
+            const ns = Math.max(0, p.stock - cartQty[id]);
             const { error:stErr } = await supa.from('products').update({ stock:ns }).eq('id', p.id);
-            if (stErr) throw stErr;
-            p.stock = ns;
+            if (stErr) {
+                // Stok gagal update: transaksi tetap tersimpan, tapi beri peringatan
+                console.error('Stok gagal update untuk produk id=' + id + ':', stErr.message);
+                showToast('⚠️ Transaksi tersimpan, tapi stok ' + p.name + ' gagal diupdate!');
+            } else {
+                p.stock = ns;
+            }
         }
 
         // Update state lokal
@@ -1396,7 +1478,11 @@ async function selesaikanTransaksi() {
         document.getElementById('filter-laporan').value = '';
         switchTab('menu');
         showToast('✅ Transaksi berhasil! Kembalian: Rp ' + kembalian.toLocaleString('id-ID'));
-    } catch(e) { alert('Gagal menyimpan transaksi: ' + e.message); }
+    } catch(e) {
+        console.error('selesaikanTransaksi error:', e);
+        alert('❌ Gagal menyimpan transaksi!\n\n' + e.message + '\n\nKeranjang tidak dihapus. Coba lagi atau catat manual.');
+        // Jangan hapus cartQty supaya kasir bisa coba ulang
+    }
     finally { setLoader(null); btn.disabled = false; }
 }
 
@@ -2006,45 +2092,46 @@ function hppRenderCards() {
             </div>` : '';
 
         return `
-        <div class="hpp-card">
-            <div class="hpp-card-header">
+        <div class="hpp-card" style="gap:0;">
+            <div class="hpp-card-header" onclick="hppToggleCard('${nm.replace(/'/g,"\\'")}')` + `" style="cursor:pointer;padding:2px 0;">
                 <div class="hpp-thumb" id="thumb-${KEY}">${hppThumb(nm,42)}</div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-size:15px;font-weight:900;color:var(--text-main);">${nm}</div>
-                    <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-top:2px;">${d.bons.length} bon utama</div>
+                    <div style="font-size:14px;font-weight:900;color:var(--text-main);">${nm}</div>
+                    <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-top:1px;">${d.bons.length} bon · Stok: ${stok} · Rp ${hj>0?hj.toLocaleString('id-ID'):'-'}</div>
                 </div>
-                <div class="hpp-stok-box" onclick="hppToggleCard('${nm.replace(/'/g,"\\'")}')"><span>STOK:</span><span>${stok}</span></div>
-                <button onclick="hppHapusProduk('${nm.replace(/'/g,"\\'")}',${prodObj?prodObj.id:'null'})"
+                <button onclick="event.stopPropagation();hppHapusProduk('${nm.replace(/'/g,"\\'")}',${prodObj?prodObj.id:'null'})"
                     style="background:#fde8e8;border:none;color:var(--danger);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:4px;">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-            </div>
-            <!-- Upload gambar -->
-            <div class="hpp-url-row">
-                <input type="file" accept="image/*" id="file-${KEY}" style="display:none;" onchange="hppFileChosen(this,'${nm.replace(/'/g,"\\'")}')">
-                <div class="file-label-box" id="file-label-${KEY}" onclick="document.getElementById('file-${KEY}').click()">
-                    ${savedImg?'✅ Gambar terpasang':'📂 Belum ada gambar…'}
+                <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin-left:2px;flex-shrink:0;">
+                    <i class="fa-solid ${isOpen?'fa-chevron-up':'fa-chevron-down'}" style="color:var(--primary);font-size:13px;"></i>
                 </div>
-                <button class="btn-load" onclick="document.getElementById('file-${KEY}').click()"><i class="fa-solid fa-folder-open"></i> LOAD</button>
-            </div>
-            <!-- Harga jual -->
-            <div class="hpp-hj-row">
-                <div class="hpp-label-box">HARGA JUAL</div>
-                <div class="hpp-val-box">
-                    <span>Rp</span>
-                    <input type="text" value="${hj>0?hj.toLocaleString('id-ID'):''}" placeholder="0" inputmode="numeric" style="text-transform:none;"
-                        oninput="formatRupiahInput(this);hppData['${nm}'].harga_jual=parseInt(this.value.replace(/[^0-9]/g,''))||0;hppUpdateLaba('${nm}');"
-                        onblur="hppSyncHarga('${nm}',hppData['${nm}'].harga_jual);">
-                </div>
-            </div>
-            <button class="btn-simpan-produk" id="btn-save-hpp-${KEY}" onclick="hppSimpanEdit('${nm.replace(/'/g,"\\'")}')">
-                <i class="fa-solid fa-floppy-disk"></i> SIMPAN PRODUK
-            </button>
-            <div class="hpp-divider-chevron" onclick="hppToggleCard('${nm.replace(/'/g,"\\'")}')">
-                <hr><i class="fa-solid ${isOpen?'fa-chevron-down':'fa-chevron-up'}"></i>
             </div>
             ${isOpen ? `
-            <div class="hpp-body">
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+                <!-- Upload gambar -->
+                <div class="hpp-url-row">
+                    <input type="file" accept="image/*" id="file-${KEY}" style="display:none;" onchange="hppFileChosen(this,'${nm.replace(/'/g,"\\'")}')">
+                    <div class="file-label-box" id="file-label-${KEY}" onclick="document.getElementById('file-${KEY}').click()">
+                        ${savedImg?'✅ Gambar terpasang':'📂 Belum ada gambar…'}
+                    </div>
+                    <button class="btn-load" onclick="document.getElementById('file-${KEY}').click()"><i class="fa-solid fa-folder-open"></i> LOAD</button>
+                </div>
+                <!-- Harga jual -->
+                <div class="hpp-hj-row">
+                    <div class="hpp-label-box">HARGA JUAL</div>
+                    <div class="hpp-val-box">
+                        <span>Rp</span>
+                        <input type="text" value="${hj>0?hj.toLocaleString('id-ID'):''}" placeholder="0" inputmode="numeric" style="text-transform:none;"
+                            oninput="formatRupiahInput(this);hppData['${nm}'].harga_jual=parseInt(this.value.replace(/[^0-9]/g,''))||0;hppUpdateLaba('${nm}');"
+                            onblur="hppSyncHarga('${nm}',hppData['${nm}'].harga_jual);">
+                    </div>
+                </div>
+                <button class="btn-simpan-produk" id="btn-save-hpp-${KEY}" onclick="hppSimpanEdit('${nm.replace(/'/g,"\\'")}')">
+                    <i class="fa-solid fa-floppy-disk"></i> SIMPAN PRODUK
+                </button>
+                <!-- HPP & Laba -->
+                <div class="hpp-divider-chevron" style="cursor:default;"><hr></div>
                 <div class="hpp-calc-row">
                     <div class="hpp-label-box">HPP / PORSI</div>
                     <div class="hpp-calc-val-hpp" style="border:1.5px solid ${hppBorder};color:${hppColor};">${hppVal>0?fmtRp(hppVal):'—'}</div>

@@ -19,8 +19,7 @@
     <!-- Font hanya 3 weight yang benar-benar dipakai -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- Font Awesome: load non-blocking -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         :root {
@@ -1882,7 +1881,11 @@ function escapeHtmlCust(str) {
 }
 
 // Inisialisasi chat saat halaman dimuat
-initChatFab();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChatFab);
+} else {
+    initChatFab();
+}
 </script>
 <!-- PWA Install Banner -->
 <div id="pwa-banner">

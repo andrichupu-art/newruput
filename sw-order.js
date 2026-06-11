@@ -1,4 +1,4 @@
-const CACHE_NAME = 'order-v2026061001';
+const CACHE_NAME = 'order-v202606110824';
 const ASSETS = [
   './order.html',
   './manifest-order.json',
@@ -26,6 +26,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Network-first: selalu ambil dari server, cache hanya fallback offline
   e.respondWith(
     fetch(e.request)
       .then(res => {
@@ -35,4 +36,9 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request))
   );
+});
+
+// Langsung aktif saat ada versi baru (dipanggil dari halaman)
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

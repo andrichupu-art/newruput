@@ -1981,6 +1981,48 @@ async function sendChatFromCustomer() {
     }
 }
 
+// ── Bunyi notifikasi pesan masuk (Web Audio API) ──────────
+function playChatSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+
+        // Nada 1: ting tinggi
+        const o1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        o1.connect(g1); g1.connect(ctx.destination);
+        o1.type = 'sine';
+        o1.frequency.setValueAtTime(880, now);
+        o1.frequency.exponentialRampToValueAtTime(1100, now + 0.08);
+        g1.gain.setValueAtTime(0.4, now);
+        g1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        o1.start(now); o1.stop(now + 0.3);
+
+        // Nada 2: ting lebih tinggi (selisih 0.12 detik)
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(1320, now + 0.12);
+        o2.frequency.exponentialRampToValueAtTime(1600, now + 0.2);
+        g2.gain.setValueAtTime(0.35, now + 0.12);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        o2.start(now + 0.12); o2.stop(now + 0.45);
+
+        // Tutup AudioContext setelah selesai
+        setTimeout(() => ctx.close(), 600);
+    } catch(e) {
+        // Browser tidak support Web Audio, abaikan
+    }
+}
+
+// ── Vibrate HP saat pesan masuk ───────────────────────────
+function vibratePhone() {
+    if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]); // getar-jeda-getar
+    }
+}
+
 // ── Subscribe realtime chat (sisi konsumen) ───────────────
 function subscribeChatCustomer(orderCode) {
     if (chatChannelCust) supa.removeChannel(chatChannelCust);
@@ -1995,10 +2037,13 @@ function subscribeChatCustomer(orderCode) {
             if (payload.new.sender === 'cashier') {
                 if (modal.classList.contains('open')) {
                     await loadChatMsgsCust(orderCode);
+                    playChatSound();
                 } else {
                     chatUnreadCust++;
                     updateChatFabBadge();
                     showToast('💬 Kasir membalas pesanmu!');
+                    playChatSound();
+                    vibratePhone();
                 }
             } else if (payload.new.sender === 'customer') {
                 // Pesan dari diri sendiri, refresh jika modal terbuka

@@ -448,7 +448,7 @@
         .btn-confirm:disabled { opacity: .55; cursor: not-allowed; }
 
         /* ── CHAT PANEL (di dalam tab Pesanan) ── */
-        .chat-panel-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; justify-content: flex-end; flex-direction: column; backdrop-filter: blur(3px); }
+        .chat-panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; justify-content: flex-end; flex-direction: column; backdrop-filter: blur(3px); }
         .chat-panel-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
         .chat-panel { background: white; border-radius: 24px 24px 0 0; height: 75vh; display: flex; flex-direction: column; box-shadow: 0 -8px 40px rgba(0,0,0,0.2); overflow: hidden; }
         .chat-panel-header { background: linear-gradient(135deg, #16A34A 0%, #22c55e 100%); padding: 14px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
@@ -475,6 +475,25 @@
         .chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted); }
         .chat-empty i { font-size: 36px; color: var(--border); }
         .chat-empty p { font-size: 13px; font-weight: 600; }
+        /* ── TAB CHAT ── */
+        .chat-conv-item {
+            background: var(--bg-card); border-radius: 16px;
+            padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+            cursor: pointer; border: 1.5px solid var(--border);
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .chat-conv-item:active { background: #f0fdf4; }
+        .chat-conv-item.has-unread { border-color: var(--primary); box-shadow: 0 2px 10px rgba(22,163,74,0.15); }
+        .chat-conv-avatar { width: 44px; height: 44px; border-radius: 50%; background: #e8f5ec; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; position: relative; }
+        .chat-conv-unread { position: absolute; top: -3px; right: -3px; background: var(--danger); color: white; font-size: 9px; font-weight: 900; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; display: none; align-items: center; justify-content: center; }
+        .chat-conv-unread.show { display: flex; }
+        .chat-conv-info { flex: 1; min-width: 0; }
+        .chat-conv-name { font-size: 13px; font-weight: 800; color: var(--text-main); }
+        .chat-conv-code { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 1px; }
+        .chat-conv-preview { font-size: 12px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-conv-preview.unread { color: var(--text-main); font-weight: 700; }
+        .chat-conv-time { font-size: 10px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
+
         /* Tombol chat di kartu order */
         .btn-chat-order { background: #E0F2FE; color: #0284C7; border: none; border-radius: 12px; padding: 9px 14px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: .15s; position: relative; flex-shrink: 0; }
         .btn-chat-order:active { transform: scale(0.95); }
@@ -665,6 +684,19 @@
             </div>
             <div id="pesanan-list" style="display:flex;flex-direction:column;gap:12px;">
                 <div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Belum ada pesanan</p></div>
+            </div>
+        </div>
+
+        <!-- TAB CHAT -->
+        <div id="tab-chat" class="tab-content">
+            <div style="position:relative;display:flex;align-items:center;">
+                <div style="flex:1;background:linear-gradient(to right,#16A34A 0%,#4ade80 55%,rgba(255,255,255,0) 100%);border-radius:12px;padding:10px 18px;">
+                    <h2 style="font-size:16px;font-weight:800;color:white;margin:0;">💬 Chat Konsumen</h2>
+                </div>
+                <img src="LOGO.png" alt="Logo" style="width:72px;flex-shrink:0;margin-left:-8px;">
+            </div>
+            <div id="chat-tab-list" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="empty-state"><i class="fa-solid fa-comments"></i><p>Belum ada percakapan</p></div>
             </div>
         </div>
 
@@ -867,6 +899,7 @@
         <div class="nav-item active" id="nav-menu" onclick="switchTab('menu')"><i class="fa-solid fa-store"></i><span>MENU</span></div>
         <div class="nav-item" id="nav-transaksi" onclick="switchTab('transaksi')"><i class="fa-solid fa-cash-register"></i><span>KASIR</span></div>
         <div class="nav-item" id="nav-pesanan" onclick="switchTab('pesanan')"><i class="fa-solid fa-bell"></i><span>PESANAN</span><span class="nav-badge" id="pesanan-badge"></span></div>
+        <div class="nav-item" id="nav-chat" onclick="switchTab('chat')"><i class="fa-solid fa-comments"></i><span>CHAT</span><span class="nav-badge" id="chat-nav-badge"></span></div>
         <div class="nav-item" id="nav-riwayat" onclick="switchTab('riwayat')"><i class="fa-solid fa-receipt"></i><span>RIWAYAT</span></div>
         <div class="nav-item" id="nav-laporan" onclick="switchTab('laporan')"><i class="fa-solid fa-chart-pie"></i><span>LAPORAN</span></div>
         <div class="nav-item" id="nav-hpp" onclick="switchTab('hpp')"><i class="fa-solid fa-coins"></i><span>HPP</span></div>
@@ -892,25 +925,6 @@
         </div>
     </div>
 
-    <!-- ── CHAT PANEL OVERLAY (kasir) ── -->
-    <div class="chat-panel-overlay" id="chat-panel-overlay" onclick="closeChatPanel(event)">
-        <div class="chat-panel" onclick="event.stopPropagation()">
-            <div class="chat-panel-header">
-                <div class="cp-avatar">💬</div>
-                <div class="cp-info">
-                    <div class="cp-name" id="cp-customer-name">Konsumen</div>
-                    <div class="cp-order" id="cp-order-code">#—</div>
-                </div>
-                <button class="cp-close" onclick="closeChatPanel()"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="chat-messages" id="cp-messages"></div>
-            <div class="chat-input-row">
-                <input type="text" id="cp-input" placeholder="Ketik balasan…" style="text-transform:none;"
-                    onkeydown="if(event.key==='Enter')sendChatFromKasir()">
-                <button class="chat-send-btn" id="cp-send-btn" onclick="sendChatFromKasir()">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -1338,6 +1352,7 @@ function renderUI() {
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+    if (t === 'chat') renderChatTab();
     document.getElementById('tab-'+t).classList.add('active');
     document.getElementById('nav-'+t)?.classList.add('active');
     const stickyHeader = document.getElementById('menu-sticky-header');
@@ -2517,6 +2532,94 @@ function updateFloatingCartBadge() {
     });
 })();
 
+// ╔══════════════════════════════════════════════════════════╗
+//   BACK BUTTON HANDLER (Android Hardware Back)
+// ╚══════════════════════════════════════════════════════════╝
+(function() {
+    // Selalu sediakan history entry agar popstate bisa dicegat
+    history.pushState({ app: true }, '');
+
+    window.addEventListener('popstate', function(e) {
+        // Urutan prioritas: chat panel → modal qty → modal edit → drawer → tab non-menu → tidak keluar
+        const chatOverlay = document.getElementById('chat-panel-overlay');
+        const qtyModal    = document.getElementById('qtyModal');
+        const editModal   = document.getElementById('editModal');
+        const drawer      = document.getElementById('swipe-drawer');
+
+        if (chatOverlay && chatOverlay.classList.contains('open')) {
+            _doCloseChatPanel();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (qtyModal && qtyModal.style.display !== 'none' && qtyModal.style.display !== '') {
+            closeQtyModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (editModal && editModal.style.display !== 'none' && editModal.style.display !== '') {
+            closeEditModal();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        if (drawer && drawer.classList.contains('open')) {
+            closeDrawer();
+            history.pushState({ app: true }, '');
+            return;
+        }
+        // Jika bukan di tab menu, kembali ke menu
+        const menuTab = document.getElementById('tab-menu');
+        if (menuTab && !menuTab.classList.contains('active')) {
+            switchTab('menu');
+            history.pushState({ app: true }, '');
+            return;
+        }
+        // Sudah di menu → push state lagi agar tidak keluar dari app
+        history.pushState({ app: true }, '');
+    });
+})();
+
+// ╔══════════════════════════════════════════════════════════╗
+//   BLOKIR KEYBOARD SEARCH & SHORTCUT BROWSER
+// ╚══════════════════════════════════════════════════════════╝
+(function() {
+    // Daftar shortcut browser yang diblokir
+    const BLOCKED_COMBOS = [
+        e => e.ctrlKey  && (e.key === 'k' || e.key === 'K'),   // Ctrl+K  (address bar Chrome)
+        e => e.ctrlKey  && (e.key === 'l' || e.key === 'L'),   // Ctrl+L  (focus address bar)
+        e => e.ctrlKey  && (e.key === 'f' || e.key === 'F'),   // Ctrl+F  (find in page)
+        e => e.ctrlKey  && (e.key === 'g' || e.key === 'G'),   // Ctrl+G  (find next)
+        e => e.key === 'F3',                                    // F3      (find)
+        e => e.key === 'F5',                                    // F5      (reload)
+        e => e.ctrlKey  && (e.key === 'r' || e.key === 'R'),   // Ctrl+R  (reload)
+    ];
+
+    document.addEventListener('keydown', function(e) {
+        // Jika sedang fokus di input/textarea, biarkan keyboard normal
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        // Blokir shortcut browser
+        for (const combo of BLOCKED_COMBOS) {
+            if (combo(e)) { e.preventDefault(); e.stopPropagation(); return; }
+        }
+
+        // Blokir huruf/angka tunggal agar tidak trigger Google Quick Search
+        // Hanya blokir karakter printable (panjang 1) tanpa modifier Ctrl/Alt/Meta
+        if (
+            e.key.length === 1 &&
+            !e.ctrlKey && !e.altKey && !e.metaKey
+        ) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true); // capture phase agar lebih awal dari browser
+
+    // Blokir klik kanan (context menu) di seluruh app
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+})();
+
 initApp();
 subscribeProducts();
 
@@ -2526,6 +2629,9 @@ setTimeout(() => {
     subscribePesanan();
     subscribeChatGlobal();
     opsLoad();
+    // Hapus chat lama saat startup, lalu ulangi setiap 1 jam
+    autoDeleteOldChats();
+    setInterval(autoDeleteOldChats, 60 * 60 * 1000);
 }, 2000);
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -2989,6 +3095,7 @@ async function openChatPanel(orderCode, customerName) {
     // Tandai sudah dibaca
     chatUnreadMap[orderCode] = 0;
     updateChatUnreadBadge(orderCode);
+    updateChatNavBadge();
 
     await loadChatMessages(orderCode);
     subscribeChat(orderCode);
@@ -2997,10 +3104,15 @@ async function openChatPanel(orderCode, customerName) {
 
 // ── Tutup panel ─────────────────────────────────────────────
 function closeChatPanel(e) {
+    // Tutup hanya jika klik langsung di overlay (backdrop), bukan di panel
     if (e && e.target !== document.getElementById('chat-panel-overlay')) return;
+    _doCloseChatPanel();
+}
+function _doCloseChatPanel() {
     document.getElementById('chat-panel-overlay').classList.remove('open');
     if (chatChannelKasir) { supa.removeChannel(chatChannelKasir); chatChannelKasir = null; }
     activeChatCode = null;
+    renderChatTab();
 }
 
 // ── Load pesan dari DB ────────────────────────────────────
@@ -3081,18 +3193,117 @@ function subscribeChat(orderCode) {
 function subscribeChatGlobal() {
     supa.channel('chat-global-incoming')
         .on('postgres_changes', {
-            event: 'INSERT', schema: 'public', table: 'chat_messages',
-            filter: `sender=eq.customer`
+            event: 'INSERT', schema: 'public', table: 'chat_messages'
+            // Filter sender dilakukan di sisi client — filter kolom non-primary-key
+            // tidak reliable di Supabase Realtime Postgres Changes
         }, (payload) => {
+            // Hanya proses pesan dari customer (bukan kasir sendiri)
+            if (payload.new.sender !== 'customer') return;
             const code = payload.new.order_code;
-            // Jika panel chat untuk order ini sedang terbuka, tidak perlu tambah badge
             if (activeChatCode === code) return;
             chatUnreadMap[code] = (chatUnreadMap[code] || 0) + 1;
             updateChatUnreadBadge(code);
+            updateChatNavBadge();
+            renderChatTab();
             playChatNotifSound();
             showToast('💬 Pesan baru dari #' + code);
         })
         .subscribe();
+}
+
+// ── Render daftar percakapan di tab CHAT (debounced) ─────
+let _renderChatTabTimer = null;
+function renderChatTab() {
+    clearTimeout(_renderChatTabTimer);
+    _renderChatTabTimer = setTimeout(_doRenderChatTab, 80);
+}
+async function _doRenderChatTab() {
+    const container = document.getElementById('chat-tab-list');
+    if (!container) return;
+
+    // Ambil semua order yang punya pesan (aktif + selesai)
+    const chatOrders = allOrders.filter(o => {
+        // Tampilkan semua order yang statusnya bukan pending (sudah ada interaksi)
+        // atau yang punya unread
+        return (chatUnreadMap[o.code] || 0) > 0 || ['processing','ready','done'].includes(o.status);
+    });
+
+    if (!chatOrders.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-comments"></i><p>Belum ada percakapan</p></div>';
+        return;
+    }
+
+    // Sort: unread dulu, lalu terbaru
+    chatOrders.sort((a, b) => {
+        const ua = chatUnreadMap[a.code] || 0;
+        const ub = chatUnreadMap[b.code] || 0;
+        if (ub !== ua) return ub - ua;
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    // Load preview pesan terakhir untuk setiap order
+    const previewMap = _chatPreviewCache || {};
+    container.innerHTML = chatOrders.map(o => {
+        const unread = chatUnreadMap[o.code] || 0;
+        const preview = previewMap[o.code] || '…';
+        const waktu = new Date(o.created_at).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+        const statusLabel = { pending:'⏳', processing:'🔄', ready:'✅', done:'📦' }[o.status] || '';
+        return `<div class="chat-conv-item ${unread > 0 ? 'has-unread' : ''}" onclick="openChatPanel('${o.code}','${(o.customer_name||'').replace(/'/g,"\'")}')">
+            <div class="chat-conv-avatar">👤
+                <span class="chat-conv-unread ${unread > 0 ? 'show' : ''}">${unread > 9 ? '9+' : unread}</span>
+            </div>
+            <div class="chat-conv-info">
+                <div class="chat-conv-name">${o.customer_name || 'Konsumen'}</div>
+                <div class="chat-conv-code">#${o.code} · ${statusLabel} ${o.status}</div>
+                <div class="chat-conv-preview ${unread > 0 ? 'unread' : ''}" data-preview="${o.code}">${preview}</div>
+            </div>
+            <div class="chat-conv-time">${waktu}</div>
+        </div>`;
+    }).join('');
+
+    // Load preview pesan terakhir async (tidak block render)
+    loadChatPreviews(chatOrders.map(o => o.code));
+}
+
+let _chatPreviewCache = {};
+let _chatPreviewLoading = false;
+async function loadChatPreviews(codes) {
+    if (!codes.length) return;
+    if (_chatPreviewLoading) return; // cegah concurrent call
+    _chatPreviewLoading = true;
+    try {
+        const { data } = await supa
+            .from('chat_messages')
+            .select('order_code, message, created_at')
+            .in('order_code', codes)
+            .order('created_at', { ascending: false });
+        if (!data) return;
+        // Ambil pesan terbaru per order
+        const seen = new Set();
+        data.forEach(m => {
+            if (!seen.has(m.order_code)) {
+                seen.add(m.order_code);
+                _chatPreviewCache[m.order_code] = (m.message.length > 40 ? m.message.substring(0,40)+'…' : m.message);
+            }
+        });
+        // Update preview DOM langsung — TIDAK memanggil renderChatTab() untuk hindari infinite loop
+        codes.forEach(code => {
+            const previewEl = document.querySelector(`#chat-tab-list [data-preview="${code}"]`);
+            if (previewEl && _chatPreviewCache[code]) {
+                previewEl.textContent = _chatPreviewCache[code];
+            }
+        });
+    } catch(e) {}
+    finally { _chatPreviewLoading = false; }
+}
+
+// ── Update badge angka di nav CHAT ────────────────────────
+function updateChatNavBadge() {
+    const total = Object.values(chatUnreadMap).reduce((a, b) => a + b, 0);
+    const badge = document.getElementById('chat-nav-badge');
+    if (!badge) return;
+    badge.textContent = total > 9 ? '9+' : total;
+    total > 0 ? badge.classList.add('show') : badge.classList.remove('show');
 }
 
 // ── Update badge unread di tombol chat kartu order ────────
@@ -3105,28 +3316,76 @@ function updateChatUnreadBadge(orderCode) {
 }
 
 // ── Bunyi notif ringan untuk pesan masuk ─────────────────
+let _audioCtx = null;
+function getAudioCtx() {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    return _audioCtx;
+}
+// Unlock audio saat interaksi pertama user
+document.addEventListener('click', () => { getAudioCtx(); }, { once: true });
+
 function playChatNotifSound() {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = getAudioCtx();
         const t   = ctx.currentTime;
-        [880, 1100].forEach((freq, i) => {
+
+        // 3x DING keras berurutan
+        const freqs = [1047, 1319, 1568]; // C6, E6, G6 — chord mayor cerah
+        freqs.forEach((freq, i) => {
             const o = ctx.createOscillator();
             const g = ctx.createGain();
             o.connect(g); g.connect(ctx.destination);
-            o.type = 'sine';
+            o.type = 'triangle';
             o.frequency.value = freq;
-            g.gain.setValueAtTime(0, t + i * 0.12);
-            g.gain.linearRampToValueAtTime(0.2, t + i * 0.12 + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.35);
-            o.start(t + i * 0.12);
-            o.stop(t + i * 0.12 + 0.4);
+            const start = t + i * 0.18;
+            g.gain.setValueAtTime(0, start);
+            g.gain.linearRampToValueAtTime(0.9, start + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+            o.start(start);
+            o.stop(start + 0.55);
         });
+
+        // Bass thump di awal biar "kerasa"
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const lpf = ctx.createBiquadFilter();
+        lpf.type = 'lowpass'; lpf.frequency.value = 180;
+        const bg = ctx.createGain();
+        bg.gain.setValueAtTime(1.2, t);
+        src.connect(lpf); lpf.connect(bg); bg.connect(ctx.destination);
+        src.start(t);
+        src.stop(t + 0.15);
     } catch(e) {}
 }
 
 // ── Helper escape HTML ────────────────────────────────────
 function escapeHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+//   AUTO HAPUS RIWAYAT CHAT > 24 JAM
+// ╚══════════════════════════════════════════════════════════╝
+async function autoDeleteOldChats() {
+    try {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { error, count } = await supa
+            .from('chat_messages')
+            .delete({ count: 'exact' })
+            .lt('created_at', cutoff);
+        if (error) {
+            console.warn('Auto-delete chat error:', error.message);
+        } else if (count > 0) {
+            console.log('Auto-delete: ' + count + ' pesan chat lama dihapus.');
+            _chatPreviewCache = {};
+        }
+    } catch(e) {
+        console.warn('Auto-delete chat exception:', e);
+    }
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -3236,5 +3495,26 @@ if ('serviceWorker' in navigator) {
 }
 
 </script>
+<!-- ── CHAT PANEL OVERLAY (kasir) — di luar phone-container ── -->
+<div class="chat-panel-overlay" id="chat-panel-overlay" onclick="closeChatPanel(event)">
+    <div class="chat-panel" onclick="event.stopPropagation()">
+        <div class="chat-panel-header">
+            <div class="cp-avatar">💬</div>
+            <div class="cp-info">
+                <div class="cp-name" id="cp-customer-name">Konsumen</div>
+                <div class="cp-order" id="cp-order-code">#—</div>
+            </div>
+            <button class="cp-close" onclick="_doCloseChatPanel()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="chat-messages" id="cp-messages"></div>
+        <div class="chat-input-row">
+            <input type="text" id="cp-input" placeholder="Ketik balasan…" style="text-transform:none;"
+                onkeydown="if(event.key==='Enter')sendChatFromKasir()">
+            <button class="chat-send-btn" id="cp-send-btn" onclick="sendChatFromKasir()">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

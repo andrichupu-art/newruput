@@ -11,18 +11,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#2ecc71">
 
-    <link rel="preload" href="LOGO.png" as="image">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://yemxzcouelsejceizozu.supabase.co">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
     <style>
@@ -1212,14 +1205,6 @@ function setGroup(groupKey) {
     closeDrawer();
 }
 
-function setSubCategory(cat) {
-    activeCategory = cat;
-    updateActiveCatLabel();
-    renderDrawer();
-    renderProductGrid();
-    closeDrawer();
-}
-
 function updateActiveCatLabel() {
     const groupEl = document.getElementById('acl-group-label');
     const nameEl  = document.getElementById('acl-cat-name');
@@ -1232,15 +1217,6 @@ function updateActiveCatLabel() {
         groupEl.textContent = g ? g.emoji + ' ' + g.label : activeGroup;
         nameEl.textContent  = (activeCategory && activeCategory !== '__ALL__') ? activeCategory : 'Semua ' + activeGroup;
     }
-}
-
-function renderCategoryChips() {
-    // Tidak digunakan lagi (diganti drawer), tapi tetap ada agar tidak error
-}
-
-function setCategory(cat) {
-    activeCategory = cat;
-    renderProductGrid();
 }
 
 function renderProductGrid() {
@@ -1267,7 +1243,7 @@ function renderProductGrid() {
             <div class="product-card${isSelected ? ' card-selected' : ''}" id="pcard-${p.id}" onclick="openQtyModal(${p.id},'${p.name.replace(/'/g,"\\'")}')">
                 <div class="qty-badge" id="badge-${p.id}" style="display:${qty>0?'flex':'none'}">${qty}</div>
                 <div class="pc-img-wrap">
-                    ${hasImg ? `<img src="${p.img_url}" alt="${p.name}" loading="lazy" decoding="async">` : `<span class="pc-img-emoji">${p.emoji||'🧃'}</span>`}
+                    ${hasImg ? `<img src="${p.img_url}" alt="${p.name}">` : `<span class="pc-img-emoji">${p.emoji||'🧃'}</span>`}
                 </div>
                 <div class="pc-info">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">
@@ -1316,7 +1292,7 @@ function renderUI() {
     products.forEach(p => {
         const harga    = 'Rp ' + p.price.toLocaleString('id-ID');
         const hasImg   = !!p.img_url;
-        const thumbMed = hasImg ? `<img src="${p.img_url}" class="product-image" loading="lazy" decoding="async">` : `<span class="product-bg-emoji" style="font-size:36px;">${p.emoji||'🧃'}</span>`;
+        const thumbMed = hasImg ? `<img src="${p.img_url}" class="product-image">` : `<span class="product-bg-emoji" style="font-size:36px;">${p.emoji||'🧃'}</span>`;
         const qty      = cartQty[p.id] || 0;
 
         if (qty > 0) {
@@ -1638,14 +1614,6 @@ function saveQty() {
 // ╔══════════════════════════════════════════════════════════╗
 //   MODAL EDIT PRODUK
 // ╚══════════════════════════════════════════════════════════╝
-function openEditModal(id) {
-    const p = products.find(x => x.id === id); if (!p) return;
-    currentEditId = id;
-    document.getElementById('editMenuName').innerText = p.name;
-    document.getElementById('editPrice').value = p.price;
-    document.getElementById('editStock').value = p.stock;
-    document.getElementById('editModal').style.display = 'flex';
-}
 function closeEditModal() { document.getElementById('editModal').style.display='none'; currentEditId=null; }
 
 async function saveEditProduct() {
@@ -1683,7 +1651,7 @@ function hppHPPProduk(nama) {
 }
 function hppThumb(nama, size) {
     const p = products.find(x => x.name === nama);
-    if (p && p.img_url) return `<img src="${p.img_url}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:8px;" loading="lazy" decoding="async" onerror="this.parentNode.textContent='🧃'">`;
+    if (p && p.img_url) return `<img src="${p.img_url}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:8px;" onerror="this.parentNode.textContent='🧃'">`;
     return p ? (p.emoji||'🧃') : '🧃';
 }
 function labaStyle(hj, laba) {
@@ -2863,81 +2831,46 @@ function subscribePesanan() {
                 flashPesananBadge();
             }
         })
-        .subscribe((status) => {
-            console.log('Realtime pesanan status:', status);
+        .subscribe(() => {
         });
 }
 
 function playNotifSound() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const t = ctx.currentTime;
+    // ── Suara manusia "SATU PESANAN MASUK" 3x via Web Speech API ──
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // stop jika sedang bicara
 
-        // ── 1. "CHING!" cash register bell (0.0s) ──────────────────
-        const bellFreqs = [1318, 1760, 2093];
-        bellFreqs.forEach((freq, i) => {
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.connect(g); g.connect(ctx.destination);
-            o.type = 'sine';
-            o.frequency.value = freq;
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.35 - i * 0.05, t + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
-            o.start(t);
-            o.stop(t + 1.9);
-        });
+    let count = 0;
+    const REPEAT = 3;
+    const TEKS   = 'SATU PESANAN MASUK';
 
-        // ── 2. Koin jatuh berurutan (0.3s – 4.8s) ──────────────────
-        function playCoin(startT, vol) {
-            const bufLen = ctx.sampleRate * 0.12;
-            const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
-            const data = buf.getChannelData(0);
-            for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1);
-            const src = ctx.createBufferSource();
-            src.buffer = buf;
-            const bpf = ctx.createBiquadFilter();
-            bpf.type = 'bandpass';
-            bpf.frequency.value = 3400;
-            bpf.Q.value = 12;
-            const g2 = ctx.createGain();
-            src.connect(bpf); bpf.connect(g2); g2.connect(ctx.destination);
-            g2.gain.setValueAtTime(vol, startT);
-            g2.gain.exponentialRampToValueAtTime(0.001, startT + 0.1);
-            src.start(startT);
-            src.stop(startT + 0.15);
-            const o2 = ctx.createOscillator();
-            const g3 = ctx.createGain();
-            o2.connect(g3); g3.connect(ctx.destination);
-            o2.type = 'triangle';
-            o2.frequency.setValueAtTime(2800, startT);
-            o2.frequency.exponentialRampToValueAtTime(1800, startT + 0.12);
-            g3.gain.setValueAtTime(vol * 0.5, startT);
-            g3.gain.exponentialRampToValueAtTime(0.001, startT + 0.12);
-            o2.start(startT);
-            o2.stop(startT + 0.15);
-        }
+    function ucapkan() {
+        if (count >= REPEAT) return;
+        count++;
+        const utt = new SpeechSynthesisUtterance(TEKS);
+        utt.lang   = 'id-ID';   // Bahasa Indonesia
+        utt.rate   = 0.88;      // sedikit lebih lambat agar jelas
+        utt.pitch  = 1.0;
+        utt.volume = 1.0;
 
-        const coinTimes = [0.3, 0.55, 0.75, 1.05, 1.3, 1.6, 1.9, 2.3, 2.7, 3.1, 3.6, 4.1, 4.5, 4.8];
-        const coinVols  = [0.8, 0.7,  0.9,  0.6,  0.75,0.5, 0.8, 0.6, 0.7, 0.5, 0.6, 0.4, 0.5, 0.3];
-        coinTimes.forEach((ct, i) => playCoin(t + ct, coinVols[i]));
+        // Pilih suara Indonesia jika tersedia
+        const voices = window.speechSynthesis.getVoices();
+        const idVoice = voices.find(v => v.lang === 'id-ID') ||
+                        voices.find(v => v.lang.startsWith('id'));
+        if (idVoice) utt.voice = idVoice;
 
-        // ── 3. Closing accent "Ka-ching!" (4.85s) ──────────────────
-        [1046, 1318, 1568].forEach((freq, i) => {
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.connect(g); g.connect(ctx.destination);
-            o.type = 'sine';
-            o.frequency.value = freq;
-            g.gain.setValueAtTime(0, t + 4.85 + i * 0.07);
-            g.gain.linearRampToValueAtTime(0.25, t + 4.85 + i * 0.07 + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 4.85 + i * 0.07 + 0.5);
-            o.start(t + 4.85 + i * 0.07);
-            o.stop(t + 4.85 + i * 0.07 + 0.55);
-        });
+        utt.onend = () => {
+            if (count < REPEAT) setTimeout(ucapkan, 300); // jeda 300ms antar ucapan
+        };
+        window.speechSynthesis.speak(utt);
+    }
 
-        setTimeout(() => { try { ctx.close(); } catch(e) {} }, 6000);
-    } catch(e) {}
+    // Pastikan voices sudah loaded (Chrome perlu delay pertama kali)
+    if (window.speechSynthesis.getVoices().length > 0) {
+        ucapkan();
+    } else {
+        window.speechSynthesis.addEventListener('voiceschanged', ucapkan, { once: true });
+    }
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -3387,7 +3320,6 @@ async function autoDeleteOldChats() {
         if (error) {
             console.warn('Auto-delete chat error:', error.message);
         } else if (count > 0) {
-            console.log('Auto-delete: ' + count + ' pesan chat lama dihapus.');
             _chatPreviewCache = {};
         }
     } catch(e) {
@@ -3500,19 +3432,6 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
-
-// ── Warm up image cache: preconnect ke Supabase Storage ──
-(function() {
-    try {
-        const supaUrl = (typeof SUPABASE_URL !== 'undefined') ? SUPABASE_URL : null;
-        if (supaUrl) {
-            const link = document.createElement('link');
-            link.rel = 'preconnect';
-            link.href = supaUrl;
-            document.head.appendChild(link);
-        }
-    } catch(e) {}
-})();
 
 </script>
 <!-- ── CHAT PANEL OVERLAY (kasir) — di luar phone-container ── -->

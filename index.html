@@ -1245,6 +1245,9 @@ function renderProductGrid() {
                 <div class="pc-img-wrap">
                     ${hasImg ? `<img src="${p.img_url}" alt="${p.name}">` : `<span class="pc-img-emoji">${p.emoji||'🧃'}</span>`}
                 </div>
+                <!-- FIX 11: tombol edit langsung di kartu -->
+                <button onclick="event.stopPropagation();openEditModal(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price},${p.stock})"
+                    style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.9);border:none;border-radius:8px;width:26px;height:26px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.12);z-index:15;">✏️</button>
                 <div class="pc-info">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">
                         <div style="flex:1;min-width:0;">
@@ -1404,13 +1407,16 @@ function updateRiwayatUI() {
 
     // ── Transaksi kasir (POS) ─────────────────────────────
     const txs = fd ? transactionHistory.filter(t => t.date === fd) : transactionHistory;
+    const todayWib = getFormattedDate(new Date());
     txs.forEach(tx => {
         total += tx.total;
+        const isToday = tx.date === todayWib;
         tx.items.forEach((item, idx) => {
+            const voidBtn = (idx === 0 && isToday) ? `<button onclick="voidTransaksi(${tx.id})" title="Void transaksi ini" style="background:#FDECEC;color:#EF4444;border:none;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;">VOID</button>` : '';
             tbody.innerHTML += `
                 <tr>
                     <td>${no++}</td>
-                    <td>${item.product_name}</td>
+                    <td>${item.product_name}${voidBtn}</td>
                     <td style="text-align:center;"><span class="stock-highlight">${item.qty}</span></td>
                     <td>Rp ${item.price.toLocaleString('id-ID')}</td>
                     <td style="color:var(--primary-dark);font-weight:700;">Rp ${item.subtotal.toLocaleString('id-ID')}</td>
@@ -1455,11 +1461,31 @@ function updateLaporanUI() {
     const fd  = document.getElementById('filter-laporan').value;
     const txs = fd ? transactionHistory.filter(t => t.date === fd) : transactionHistory;
     const salesMap={}, chartMap={};
+
+    // Kasir (POS)
     txs.forEach(tx => {
         if (!chartMap[tx.date]) chartMap[tx.date]=0;
         chartMap[tx.date] += tx.total;
         tx.items.forEach(item => {
             if (!salesMap[item.product_name]) salesMap[item.product_name]=0;
+            salesMap[item.product_name] += item.qty;
+        });
+    });
+
+    // FIX 13: tambahkan order online (done/ready)
+    const doneOnline = allOrders.filter(o => {
+        if (!['done','ready'].includes(o.status)) return false;
+        if (!fd) return true;
+        const wib = new Date(new Date(o.created_at).getTime() + 7 * 3600000);
+        return wib.toISOString().substring(0, 10) === fd;
+    });
+    doneOnline.forEach(o => {
+        const wib = new Date(new Date(o.created_at).getTime() + 7 * 3600000);
+        const dt  = wib.toISOString().substring(0, 10);
+        if (!chartMap[dt]) chartMap[dt] = 0;
+        chartMap[dt] += o.total || 0;
+        (o.order_items || []).forEach(item => {
+            if (!salesMap[item.product_name]) salesMap[item.product_name] = 0;
             salesMap[item.product_name] += item.qty;
         });
     });
@@ -1572,6 +1598,61 @@ async function selesaikanTransaksi() {
 //   MODAL QTY — STEPPER
 // ╚══════════════════════════════════════════════════════════╝
 let stepperMax = 0;
+// ═══════════════════════════════════════════════════════════
+//   FIX 9 — Void transaksi kasir (hari ini saja)
+// ═══════════════════════════════════════════════════════════
+async function voidTransaksi(txId) {
+    if (!confirm('Void transaksi ini?\nStok akan dikembalikan dan transaksi dihapus dari riwayat.')) return;
+    setLoader('Memvoid transaksi…');
+    try {
+        // Ambil items untuk rollback stok
+        const { data: itemsData, error: iErr } = await supa.from('transaction_items').select('*').eq('transaction_id', txId);
+        if (iErr) throw iErr;
+        // Rollback stok
+        for (const item of (itemsData || [])) {
+            const p = products.find(x => x.name === item.product_name);
+            if (p) {
+                const ns = p.stock + item.qty;
+                await supa.from('products').update({ stock: ns }).eq('id', p.id);
+                p.stock = ns;
+            }
+        }
+        // Hapus items lalu header
+        await supa.from('transaction_items').delete().eq('transaction_id', txId);
+        const { error: dErr } = await supa.from('transactions').delete().eq('id', txId);
+        if (dErr) throw dErr;
+        // Update state lokal
+        transactionHistory = transactionHistory.filter(t => t.id !== txId);
+        renderUI();
+        updateRiwayatUI();
+        showToast('✅ Transaksi berhasil di-void');
+    } catch(e) {
+        alert('Gagal void: ' + e.message);
+    } finally {
+        setLoader(null);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//   FIX 8 — Batalkan order dari sisi kasir
+// ═══════════════════════════════════════════════════════════
+async function batalkanOrderKasir(id) {
+    if (!confirm('Batalkan / tolak pesanan ini?')) return;
+    await ubahStatusOrder(id, 'done');
+}
+
+// ═══════════════════════════════════════════════════════════
+//   FIX 11 — openEditModal (bisa dipanggil dari tab Menu/Kasir)
+// ═══════════════════════════════════════════════════════════
+let currentEditId = null;
+function openEditModal(id, name, price, stock) {
+    currentEditId = id;
+    document.getElementById('editMenuName').textContent = name;
+    document.getElementById('editPrice').value = price;
+    document.getElementById('editStock').value = stock;
+    document.getElementById('editModal').style.display = 'flex';
+}
+
 function openQtyModal(id, name) {
     const p = products.find(x => x.id === id);
     if (!p || p.stock <= 0) { showToast('⚠️ Stok produk ini habis!'); return; }
@@ -2671,11 +2752,15 @@ function renderPesananList() {
         // Tombol aksi
         let actionBtns = '';
         if (o.status === 'pending') {
+            // FIX 8: visual disabled jika belum verifikasi
+            const isBlocked = !o.is_member && o.payment_status === 'waiting_verification';
             actionBtns = `
-                <button class="btn-status next" onclick="ubahStatusOrder(${o.id},'processing')">
+                <button class="btn-status next" onclick="ubahStatusOrder(${o.id},'processing')"
+                    ${isBlocked ? 'disabled style="opacity:.4;cursor:not-allowed;background:#94A3B8;box-shadow:none;" title="Verifikasi pembayaran dulu"' : ''}>
                     <i class="fa-solid fa-fire"></i> Proses Sekarang
+                    ${isBlocked ? '<span style="font-size:9px;margin-left:4px;">(Belum diverifikasi)</span>' : ''}
                 </button>
-                <button class="btn-status done" onclick="ubahStatusOrder(${o.id},'done')" title="Batalkan / Tolak">
+                <button class="btn-status done" onclick="batalkanOrderKasir(${o.id})" title="Batalkan / Tolak">
                     <i class="fa-solid fa-xmark"></i>
                 </button>`;
         } else if (o.status === 'processing') {
@@ -2746,7 +2831,7 @@ async function fetchOrders() {
             .from('orders')
             .select('*, order_items(*)')
             .order('created_at', { ascending: false })
-            .limit(100);
+            .limit(500); // FIX 12: naikkan limit (dari 100 → 500)
         if (error) throw error;
         allOrders = data || [];
         renderPesananList();
@@ -2824,11 +2909,20 @@ function subscribePesanan() {
     pesananChannel = supa
         .channel('orders-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
+            const prev = allOrders.find(o => o.id === payload.new?.id);
             await fetchOrders();
             if (payload.eventType === 'INSERT') {
                 playNotifSound();
                 showToast('🔔 Pesanan baru masuk!');
                 flashPesananBadge();
+            }
+            // FIX 7: notif saat bukti pembayaran baru masuk (UPDATE dengan payment_proof_url baru)
+            if (payload.eventType === 'UPDATE' && payload.new?.payment_proof_url &&
+                (!prev || !prev.payment_proof_url)) {
+                showToast('📷 Bukti bayar baru dari #' + payload.new.code + '!');
+                flashPesananBadge();
+                try { const a = new Audio('data:audio/wav;base64,UklGRl9vT1dBVkVmbXQAAAAAABAAAAEAAAAAAAAAAAAAAA=='); a.play().catch(()=>{}); } catch(e) {}
+                if ('vibrate' in navigator) navigator.vibrate([100,50,100]);
             }
         })
         .subscribe(() => {

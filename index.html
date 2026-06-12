@@ -11,11 +11,18 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#2ecc71">
 
+    <link rel="preload" href="LOGO.png" as="image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://yemxzcouelsejceizozu.supabase.co">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
     <style>
@@ -1260,7 +1267,7 @@ function renderProductGrid() {
             <div class="product-card${isSelected ? ' card-selected' : ''}" id="pcard-${p.id}" onclick="openQtyModal(${p.id},'${p.name.replace(/'/g,"\\'")}')">
                 <div class="qty-badge" id="badge-${p.id}" style="display:${qty>0?'flex':'none'}">${qty}</div>
                 <div class="pc-img-wrap">
-                    ${hasImg ? `<img src="${p.img_url}" alt="${p.name}">` : `<span class="pc-img-emoji">${p.emoji||'🧃'}</span>`}
+                    ${hasImg ? `<img src="${p.img_url}" alt="${p.name}" loading="lazy" decoding="async">` : `<span class="pc-img-emoji">${p.emoji||'🧃'}</span>`}
                 </div>
                 <div class="pc-info">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">
@@ -1309,7 +1316,7 @@ function renderUI() {
     products.forEach(p => {
         const harga    = 'Rp ' + p.price.toLocaleString('id-ID');
         const hasImg   = !!p.img_url;
-        const thumbMed = hasImg ? `<img src="${p.img_url}" class="product-image">` : `<span class="product-bg-emoji" style="font-size:36px;">${p.emoji||'🧃'}</span>`;
+        const thumbMed = hasImg ? `<img src="${p.img_url}" class="product-image" loading="lazy" decoding="async">` : `<span class="product-bg-emoji" style="font-size:36px;">${p.emoji||'🧃'}</span>`;
         const qty      = cartQty[p.id] || 0;
 
         if (qty > 0) {
@@ -1676,7 +1683,7 @@ function hppHPPProduk(nama) {
 }
 function hppThumb(nama, size) {
     const p = products.find(x => x.name === nama);
-    if (p && p.img_url) return `<img src="${p.img_url}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:8px;" onerror="this.parentNode.textContent='🧃'">`;
+    if (p && p.img_url) return `<img src="${p.img_url}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:8px;" loading="lazy" decoding="async" onerror="this.parentNode.textContent='🧃'">`;
     return p ? (p.emoji||'🧃') : '🧃';
 }
 function labaStyle(hj, laba) {
@@ -3493,6 +3500,19 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
+
+// ── Warm up image cache: preconnect ke Supabase Storage ──
+(function() {
+    try {
+        const supaUrl = (typeof SUPABASE_URL !== 'undefined') ? SUPABASE_URL : null;
+        if (supaUrl) {
+            const link = document.createElement('link');
+            link.rel = 'preconnect';
+            link.href = supaUrl;
+            document.head.appendChild(link);
+        }
+    } catch(e) {}
+})();
 
 </script>
 <!-- ── CHAT PANEL OVERLAY (kasir) — di luar phone-container ── -->

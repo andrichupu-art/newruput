@@ -596,6 +596,11 @@
         <button class="btn-share-wa" id="btn-share-wa" onclick="shareViaWA()">
             <i class="fa-brands fa-whatsapp"></i> Bagikan ke Teman via WhatsApp
         </button>
+        <!-- FIX 2: tombol batalkan pesanan (hanya saat pending) -->
+        <button id="btn-batalkan-pesanan" onclick="batalkanPesanan()"
+            style="display:none;background:#FDECEC;color:#EF4444;border:none;border-radius:14px;padding:13px 24px;font-size:14px;font-weight:800;cursor:pointer;width:100%;max-width:320px;font-family:'Poppins',sans-serif;">
+            ✕ Batalkan Pesanan
+        </button>
         <button class="btn-order-again" onclick="resetApp()">+ Pesan Lagi</button>
     </div>
 </div>
@@ -730,7 +735,8 @@
                 </div>
                 <div>
                     <label>Nomor HP / WhatsApp</label>
-                    <input type="tel" id="input-hp" placeholder="08xxxxxxxxxx" inputmode="numeric" style="text-transform:none;" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" autocomplete="new-password" spellcheck="false" data-form-type="other">
+                    <input type="tel" id="input-hp" placeholder="08xxxxxxxxxx" inputmode="numeric" style="text-transform:none;" oninput="this.value=this.value.replace(/[^0-9+]/g,'');validateSendButton();" autocomplete="new-password" spellcheck="false" data-form-type="other">
+                    <p id="hp-hint" style="font-size:10px;color:var(--danger);margin-top:4px;display:none;">⚠️ Nomor HP minimal 10 digit</p>
                 </div>
                 <div>
                     <label>Tipe Pesanan</label>
@@ -843,6 +849,10 @@
                         <p>Tap untuk pilih foto bukti transfer</p>
                     </div>
                     <img id="upload-preview" class="upload-preview" alt="Preview bukti">
+                    <!-- FIX 5: tombol ganti foto -->
+                    <button id="btn-ganti-foto" onclick="gantiProof()" style="display:none;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;width:100%;font-family:'Poppins',sans-serif;">
+                        🔄 Ganti Foto
+                    </button>
                     <p id="upload-status" style="font-size:11px;font-weight:700;color:var(--text-muted);margin-top:8px;text-align:center;"></p>
                 </div>
             </div>
@@ -1126,6 +1136,7 @@ function saveQtyToCart() {
 // ── CART MODAL ───────────────────────────────────────────────
 function openCartModal() {
     renderCartModal();
+    loadSavedUserInfo(); // FIX 3: prefill nama & HP
     document.getElementById('cart-modal').classList.add('open');
 }
 function closeCartModal() { document.getElementById('cart-modal').classList.remove('open'); }
@@ -1247,6 +1258,9 @@ function validateSendButton() {
     const ok   = cartItems() > 0 && nama && hp.length >= 10 && orderType &&
                  (orderType !== 'pickup' || pickupTime);
     document.getElementById('btn-send-order').disabled = !ok;
+    // FIX 4: hint HP
+    const hpHint = document.getElementById('hp-hint');
+    if (hpHint) hpHint.style.display = (hp.length > 0 && hp.length < 10) ? 'block' : 'none';
 }
 
 // Live validation
@@ -1260,6 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function sendOrder() {
     const nama  = document.getElementById('input-nama').value.trim();
     const hp    = document.getElementById('input-hp').value.trim();
+    saveUserInfo(); // FIX 3: simpan nama & HP ke localStorage
     const items = Object.keys(cart).map(id => {
         const p = products.find(x => x.id == id);
         return { product_id: parseInt(id), product_name: p.name, qty: cart[id].qty, note: cart[id].note||'', price: p.price, subtotal: p.price * cart[id].qty };
@@ -1323,6 +1338,24 @@ function previewProof(event) {
     document.getElementById('upload-status').textContent = '✅ Foto dipilih: ' + file.name;
     document.getElementById('btn-confirm-pay').disabled = false;
     document.getElementById('btn-confirm-pay').style.opacity = '1';
+    // FIX 5: tampilkan tombol ganti foto
+    const gantiBtn = document.getElementById('btn-ganti-foto');
+    if (gantiBtn) gantiBtn.style.display = 'block';
+    const uploadArea = document.getElementById('upload-area');
+    if (uploadArea) uploadArea.style.display = 'none';
+}
+
+// FIX 5: fungsi ganti foto
+function gantiProof() {
+    document.getElementById('proof-file').value = '';
+    document.getElementById('upload-preview').style.display = 'none';
+    document.getElementById('upload-status').textContent = '';
+    document.getElementById('btn-confirm-pay').disabled = true;
+    document.getElementById('btn-confirm-pay').style.opacity = '0.5';
+    const gantiBtn = document.getElementById('btn-ganti-foto');
+    if (gantiBtn) gantiBtn.style.display = 'none';
+    const uploadArea = document.getElementById('upload-area');
+    if (uploadArea) uploadArea.style.display = 'block';
 }
 
 let _confirmInProgress = false;
@@ -1369,8 +1402,13 @@ async function confirmPayment() {
         activeOrderCode = code;
         localStorage.setItem('fj_order_code', code);
         localStorage.setItem('fj_order_ts', Date.now().toString());
+        if (pickupTime) localStorage.setItem('fj_pickup_time', pickupTime); // FIX 6
+        _readyNotified = false; // FIX 1: reset notif flag
         document.getElementById('success-code').textContent = code;
         document.getElementById('success-type-info').textContent = `🏪 Diambil ke Toko — Jam ${pickupTime}`;
+        // FIX 2: tampilkan tombol batalkan (status masih pending)
+        const btnBatal = document.getElementById('btn-batalkan-pesanan');
+        if (btnBatal) btnBatal.style.display = 'block';
         closePaymentModal();
         document.getElementById('success-screen').classList.add('show');
         activateChatFab(code, pendingOrderData.nama);
@@ -1432,13 +1470,19 @@ async function checkOrderStatus() {
         const wrap = document.getElementById('status-banner-wrap');
         const txt  = document.getElementById('status-banner-text');
         wrap.style.display = 'block';
-        txt.textContent = statusLabels[data.status] || data.status;
+        // FIX 6: tampilkan jam pengambilan jika tersedia
+        const savedPickupTime = localStorage.getItem('fj_pickup_time') || '';
+        const jamInfo = savedPickupTime ? ` · Ambil jam ${savedPickupTime}` : '';
+        txt.textContent = (statusLabels[data.status] || data.status) + jamInfo;
 
         // Update juga di success screen (jika masih terbuka)
         const ssTxt  = document.getElementById('success-status-text');
         const ssIcon = document.getElementById('success-status-icon');
         if (ssTxt)  ssTxt.textContent  = statusLabels[data.status] || data.status;
         if (ssIcon) ssIcon.textContent = statusIcons[data.status] || '⏳';
+        // FIX 2: tombol batalkan hanya saat pending
+        const btnBatal = document.getElementById('btn-batalkan-pesanan');
+        if (btnBatal) btnBatal.style.display = data.status === 'pending' ? 'block' : 'none';
     } catch(e) {}
 }
 
@@ -1478,6 +1522,9 @@ function startStatusPoll() {
             const ssIcon = document.getElementById('success-status-icon');
             if (ssTxt)  ssTxt.textContent  = statusLabels[data.status] || data.status;
             if (ssIcon) ssIcon.textContent = statusIcons[data.status] || '⏳';
+
+            // FIX 1: Notifikasi saat READY
+            if (data.status === 'ready') notifyOrderReady();
         })
         .subscribe((status, err) => {
             if (status === 'SUBSCRIBED') {
@@ -1585,6 +1632,102 @@ function resetApp() {
         document.getElementById('status-banner-wrap').style.display = 'block';
     }
 }
+
+// ═══════════════════════════════════════════════════════════
+//   FIX 1 — Notifikasi saat pesanan READY
+// ═══════════════════════════════════════════════════════════
+let _readyNotified = false; // cegah notif berulang
+
+function notifyOrderReady() {
+    if (_readyNotified) return;
+    _readyNotified = true;
+
+    // Suara
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [0, 300, 600].forEach(delay => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.6, ctx.currentTime + delay / 1000);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay / 1000 + 0.4);
+            osc.start(ctx.currentTime + delay / 1000);
+            osc.stop(ctx.currentTime + delay / 1000 + 0.5);
+        });
+    } catch(e) {}
+
+    // Vibrate
+    if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 400]);
+
+    // Toast besar
+    const el = document.getElementById('toast');
+    if (el) {
+        el.style.cssText = 'background:#16A34A;font-size:15px;padding:14px 24px;border-radius:16px;bottom:50%;left:50%;transform:translateX(-50%) translateY(50%);white-space:normal;text-align:center;max-width:280px;line-height:1.4;z-index:9999;position:fixed;color:white;font-weight:800;opacity:1;pointer-events:none;';
+        el.textContent = '🔔 Pesanan kamu SIAP!\nSilakan ambil ke toko';
+        el.classList.add('show');
+        setTimeout(() => {
+            el.classList.remove('show');
+            el.style.cssText = '';
+        }, 5000);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//   FIX 2 — Batalkan pesanan (selama status pending)
+// ═══════════════════════════════════════════════════════════
+async function batalkanPesanan() {
+    if (!activeOrderCode) return;
+    if (!confirm('Yakin ingin membatalkan pesanan #' + activeOrderCode + '?\nStok akan dikembalikan.')) return;
+    try {
+        // Ambil order untuk rollback stok
+        const { data: ord } = await supa.from('orders').select('*, order_items(*)').eq('code', activeOrderCode).single();
+        if (!ord || ord.status !== 'pending') {
+            toast('⚠️ Pesanan tidak bisa dibatalkan (status bukan pending)');
+            return;
+        }
+        // Update status ke cancelled
+        const { error } = await supa.from('orders').update({ status: 'done', payment_status: 'cancelled' }).eq('code', activeOrderCode);
+        if (error) throw error;
+        // Rollback stok
+        for (const item of (ord.order_items || [])) {
+            const p = products.find(x => x.id === item.product_id);
+            if (p) {
+                const ns = p.stock + item.qty;
+                await supa.from('products').update({ stock: ns }).eq('id', p.id);
+                p.stock = ns;
+            }
+        }
+        clearActiveOrder();
+        toast('✅ Pesanan berhasil dibatalkan');
+        document.getElementById('success-screen').classList.remove('show');
+        renderGrid();
+    } catch(e) {
+        toast('❌ Gagal batalkan: ' + e.message);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//   FIX 3 — localStorage prefill nama & HP
+// ═══════════════════════════════════════════════════════════
+function loadSavedUserInfo() {
+    const nama = localStorage.getItem('fj_cust_name') || '';
+    const hp   = localStorage.getItem('fj_cust_hp') || '';
+    if (nama) document.getElementById('input-nama').value = nama;
+    if (hp)   document.getElementById('input-hp').value = hp;
+    if (nama || hp) validateSendButton();
+}
+
+function saveUserInfo() {
+    const nama = document.getElementById('input-nama').value.trim();
+    const hp   = document.getElementById('input-hp').value.trim();
+    if (nama) localStorage.setItem('fj_cust_name', nama);
+    if (hp)   localStorage.setItem('fj_cust_hp', hp);
+}
+
+// ═══════════════════════════════════════════════════════════
+//   FIX 7 (index) — Notif kasir saat bukti pembayaran baru (order.html tidak terpengaruh)
+// ═══════════════════════════════════════════════════════════
 
 // ── START ────────────────────────────────────────────────────
 initApp();

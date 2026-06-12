@@ -1182,63 +1182,6 @@ function cartAdjust(id, delta) {
     renderCartModal();
 }
 
-function buildPickupTimeGrid() {
-    const list = document.getElementById('time-dropdown-list');
-
-    // Waktu sekarang dalam WIB (UTC+7)
-    const now = new Date();
-    const wibNow = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
-    const nowMinutes = wibNow.getHours() * 60 + wibNow.getMinutes();
-
-    // Buat semua slot 10.00-20.00
-    const allSlots = [];
-    for (let h = 10; h <= 20; h++) {
-        allSlots.push(String(h).padStart(2,'0') + '.00');
-        if (h < 20) allSlots.push(String(h).padStart(2,'0') + '.30');
-    }
-
-    // Helper: slot string ke menit
-    const toMin = t => { const [h,m] = t.split('.').map(Number); return h*60+m; };
-
-    // Filter slot yang sudah lewat
-    const slots = allSlots.filter(t => toMin(t) > nowMinutes);
-
-    // Kalau semua slot sudah lewat (toko tutup)
-    if (slots.length === 0) {
-        list.innerHTML = '<div class="tdl-group-label" style="padding:12px;text-align:center;color:var(--danger);">⛔ Toko sudah tutup hari ini</div>';
-        return;
-    }
-
-    const groups = [
-        { label: '🌤️ Pagi (10.00 – 11.30)', times: slots.filter(t => toMin(t) < 12*60) },
-        { label: '☀️ Siang (12.00 – 14.30)', times: slots.filter(t => toMin(t) >= 12*60 && toMin(t) < 15*60) },
-        { label: '🌇 Sore (15.00 – 20.00)',  times: slots.filter(t => toMin(t) >= 15*60) },
-    ];
-
-    let html = '';
-    groups.forEach(g => {
-        if (g.times.length === 0) return;
-        html += '<div class="tdl-group-label">' + g.label + '</div>';
-        html += g.times.map(t =>
-            '<div class="tdl-item" onclick="selectPickupTime(\'' + t + '\')" id="ptime-' + t.replace('.','_') + '">' +
-            '<div class="tdl-dot"></div> ' + t + '</div>'
-        ).join('');
-    });
-    list.innerHTML = html;
-
-    // Restore highlight kalau pickupTime masih valid di daftar
-    if (pickupTime && slots.includes(pickupTime)) {
-        const el = document.getElementById('ptime-' + pickupTime.replace('.','_'));
-        if (el) el.classList.add('selected');
-    } else if (pickupTime && !slots.includes(pickupTime)) {
-        // Jam yang dipilih sudah lewat, reset
-        pickupTime = null;
-        document.getElementById('time-dropdown-label').textContent = 'Pilih jam pengambilan…';
-        const btn = document.getElementById('time-dropdown-btn');
-        btn.classList.remove('selected');
-        validateSendButton();
-    }
-}
 
 // ── TIME STEPPER ────────────────────────────────────────
 let _timeSlots  = [];   // semua slot valid hari ini
@@ -1412,14 +1355,17 @@ async function confirmPayment() {
         if (oErr) throw oErr;
         const { error: iErr } = await supa.from('order_items').insert(items.map(i => ({ ...i, order_id: orderRow.id })));
         if (iErr) throw iErr;
-        // Update stock paralel (lebih cepat dari sequential loop)
-        await Promise.all(items.map(item => {
+        // Update stock satu per satu (sequential) untuk hindari race condition
+        for (const item of items) {
             const p = products.find(x => x.id == item.product_id);
-            if (!p) return Promise.resolve();
-            const ns = p.stock - item.qty;
-            p.stock = ns;
-            return supa.from('products').update({ stock: ns }).eq('id', p.id);
-        }));
+            if (!p) continue;
+            const ns = Math.max(0, p.stock - item.qty);
+            const { error: sErr } = await supa.from('products')
+                .update({ stock: ns })
+                .eq('id', p.id)
+                .eq('stock', p.stock); // optimistic lock: hanya update jika stock belum berubah
+            if (!sErr) p.stock = ns;
+        }
         activeOrderCode = code;
         localStorage.setItem('fj_order_code', code);
         localStorage.setItem('fj_order_ts', Date.now().toString());
@@ -1443,9 +1389,32 @@ async function confirmPayment() {
     }
 }
 
+// ── Handler order selesai (dipakai oleh polling & realtime) ──
+function handleOrderDone() {
+    const wrap = document.getElementById('status-banner-wrap');
+    const txt  = document.getElementById('status-banner-text');
+    if (wrap) wrap.style.display = 'block';
+    if (txt)  txt.textContent = '🎉 Pesanan selesai';
+
+    const ssTxt  = document.getElementById('success-status-text');
+    const ssIcon = document.getElementById('success-status-icon');
+    if (ssTxt)  ssTxt.textContent  = 'Pesanan selesai';
+    if (ssIcon) ssIcon.textContent = '🎉';
+
+    const ts = parseInt(localStorage.getItem('fj_order_ts') || '0');
+    const remaining = (6 * 60 * 60 * 1000) - (Date.now() - ts);
+    const cleanup = () => {
+        localStorage.removeItem('fj_order_code');
+        localStorage.removeItem('fj_order_ts');
+        activeOrderCode = null;
+        if (wrap) wrap.style.display = 'none';
+    };
+    if (remaining > 0) setTimeout(cleanup, remaining);
+    else cleanup();
+}
+
 // ── STATUS TRACKING ──────────────────────────────────────────
 async function checkOrderStatus() {
-    console.log('Polling jalan', activeOrderCode);
     if (!activeOrderCode) return;
     try {
         const { data, error } = await supa.from('orders')
@@ -1454,37 +1423,9 @@ async function checkOrderStatus() {
         if (error) { console.error('[Poll] error:', error.message, error.code); return; }
         if (!data) { console.warn('[Poll] data null untuk code:', activeOrderCode); return; }
         if (data.status === 'done') {
-
-    const wrap = document.getElementById('status-banner-wrap');
-    const txt = document.getElementById('status-banner-text');
-
-    if (wrap) wrap.style.display = 'block';
-    if (txt) txt.textContent = '🎉 Pesanan selesai';
-
-    const ssTxt = document.getElementById('success-status-text');
-    const ssIcon = document.getElementById('success-status-icon');
-
-    if (ssTxt) ssTxt.textContent = 'Pesanan selesai';
-    if (ssIcon) ssIcon.textContent = '🎉';
-
-    // Auto hilang setelah 6 jam dari timestamp order
-    const ts = parseInt(localStorage.getItem('fj_order_ts') || '0');
-    const remaining = (6 * 60 * 60 * 1000) - (Date.now() - ts);
-    if (remaining > 0) {
-        setTimeout(() => {
-            localStorage.removeItem('fj_order_code');
-            localStorage.removeItem('fj_order_ts');
-            activeOrderCode = null;
-            if (wrap) wrap.style.display = 'none';
-        }, remaining);
-    } else {
-        localStorage.removeItem('fj_order_code');
-        localStorage.removeItem('fj_order_ts');
-        activeOrderCode = null;
-        if (wrap) wrap.style.display = 'none';
-    }
-    return;
-}
+            handleOrderDone();
+            return;
+        }
 
         const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
         const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };
@@ -1521,42 +1462,13 @@ function startStatusPoll() {
             // Abaikan update order lain
             if (payload.new.code !== activeOrderCode) return;
             const data = payload.new;
-            console.log('REALTIME MASUK:', payload);
             const statusLabels = { pending:'Menunggu konfirmasi kasir…', processing:'Sedang diproses…', ready:'Pesanan siap! Silakan ambil 🎉' };
             const statusIcons  = { pending:'⏳', processing:'👨‍🍳', ready:'✅' };
 
             if (data.status === 'done') {
-
-    const wrap = document.getElementById('status-banner-wrap');
-    const txt = document.getElementById('status-banner-text');
-
-    if (wrap) wrap.style.display = 'block';
-    if (txt) txt.textContent = '🎉 Pesanan selesai';
-
-    const ssTxt = document.getElementById('success-status-text');
-    const ssIcon = document.getElementById('success-status-icon');
-
-    if (ssTxt) ssTxt.textContent = 'Pesanan selesai';
-    if (ssIcon) ssIcon.textContent = '🎉';
-
-    // Auto hilang setelah 6 jam dari timestamp order
-    const ts2 = parseInt(localStorage.getItem('fj_order_ts') || '0');
-    const remaining2 = (6 * 60 * 60 * 1000) - (Date.now() - ts2);
-    if (remaining2 > 0) {
-        setTimeout(() => {
-            localStorage.removeItem('fj_order_code');
-            localStorage.removeItem('fj_order_ts');
-            activeOrderCode = null;
-            if (wrap) wrap.style.display = 'none';
-        }, remaining2);
-    } else {
-        localStorage.removeItem('fj_order_code');
-        localStorage.removeItem('fj_order_ts');
-        activeOrderCode = null;
-        if (wrap) wrap.style.display = 'none';
-    }
-    return;
-}
+                handleOrderDone();
+                return;
+            }
 
             const wrap = document.getElementById('status-banner-wrap');
             const txt  = document.getElementById('status-banner-text');
@@ -1568,17 +1480,14 @@ function startStatusPoll() {
             if (ssIcon) ssIcon.textContent = statusIcons[data.status] || '⏳';
         })
         .subscribe((status, err) => {
-            console.log('[Realtime] status:', status, err || '');
             if (status === 'SUBSCRIBED') {
                 // Realtime aktif → polling tidak perlu, hemat resource
                 clearInterval(statusPollTimer);
                 statusPollTimer = null;
-                console.log('[Poll] dihentikan, Realtime sudah aktif');
             }
             if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
                 // Realtime putus → aktifkan polling sebagai fallback
                 if (!statusPollTimer) {
-                    console.log('[Poll] Realtime putus, polling diaktifkan');
                     statusPollTimer = setInterval(async () => {
                         await checkOrderStatus();
                     }, 3000);
@@ -1877,8 +1786,8 @@ let chatUnreadCust   = 0;      // pesan belum dibaca dari kasir
 
 // ── Inisialisasi: tampilkan FAB jika ada order aktif ─────
 function initChatFab() {
-    const code = localStorage.getItem('activeOrderCode');
-    const name = localStorage.getItem('activeOrderName') || 'Konsumen';
+    const code = localStorage.getItem('fj_order_code');
+    const name = localStorage.getItem('fj_order_name') || 'Konsumen';
     if (!code) return;
     chatOrderCode    = code;
     chatCustomerName = name;
@@ -1891,8 +1800,8 @@ function initChatFab() {
 function activateChatFab(orderCode, customerName) {
     chatOrderCode    = orderCode;
     chatCustomerName = customerName || 'Konsumen';
-    localStorage.setItem('activeOrderCode', orderCode);
-    localStorage.setItem('activeOrderName', chatCustomerName);
+    localStorage.setItem('fj_order_code', orderCode);
+    localStorage.setItem('fj_order_name', chatCustomerName);
     document.getElementById('chat-order-label').textContent = 'Pesanan #' + orderCode;
     document.getElementById('header-chat-btn').style.display = 'flex';
     subscribeChatCustomer(orderCode);

@@ -11,6 +11,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="NEWRUPUT JUICE">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preload" href="LOGO.png" as="image">
+    <link rel="preconnect" href="https://yemxzcouelsejceizozu.supabase.co">
     <!-- Preconnect ke CDN agar koneksi siap lebih awal -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +21,8 @@
     <!-- Font hanya 3 weight yang benar-benar dipakai -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- Font Awesome: load non-blocking -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         :root {
@@ -1058,7 +1061,7 @@ function renderGrid() {
     grid.innerHTML = filtered.map(p => {
         const qty = cart[p.id]?.qty || 0;
         const img = p.img_url
-            ? `<img src="${p.img_url}" alt="${p.name}" onerror="this.parentNode.innerHTML='<span class=emoji>${p.emoji||'🧃'}</span>'">`
+            ? `<img src="${p.img_url}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML='<span class=emoji>${p.emoji||'🧃'}</span>'">`
             : `<span class="emoji">${p.emoji||'🧃'}</span>`;
         return `
         <div class="prod-card${qty>0?' in-cart':''}${p.stock<=0?' out-of-stock':''}" id="pcard-${p.id}" onclick="openQtyModal(${p.id})">
@@ -1088,7 +1091,7 @@ function openQtyModal(id) {
     selectedPid = id; stepperMax = p.stock;
 
     const img = p.img_url
-        ? `<img src="${p.img_url}" alt="${p.name}">`
+        ? `<img src="${p.img_url}" alt="${p.name}" loading="lazy" decoding="async">`
         : `<span class="emoji">${p.emoji||'🧃'}</span>`;
     document.getElementById('qm-img').innerHTML = img;
     document.getElementById('qm-name').textContent = p.name;
@@ -1140,7 +1143,7 @@ function renderCartModal() {
             if (!p) return '';
             const { qty, note } = cart[id];
             const thumb = p.img_url
-                ? `<img src="${p.img_url}">`
+                ? `<img src="${p.img_url}" loading="lazy" decoding="async">`
                 : (p.emoji || '🧃');
             return `
             <div class="cart-item-row">
